@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
@@ -24,12 +25,14 @@ const MODES = [
 
 interface EnhanceResponse {
   ok: boolean;
+  enhanceId: number;
   enhanced: string;
   why: string;
   balance: number;
 }
 
 export default function EnhanceScreen() {
+  const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<string>("general");
   const [strength, setStrength] = useState<"light" | "full">("light");
@@ -77,7 +80,7 @@ export default function EnhanceScreen() {
         (raw.length > 60 ? "..." : "");
       await api("/api/prompts", {
         method: "POST",
-        body: { title, text: result.enhanced },
+        body: { title, text: result.enhanced, enhanceId: result.enhanceId },
       });
       setSaved(true);
     } catch (err) {
@@ -104,15 +107,30 @@ export default function EnhanceScreen() {
       contentContainerStyle={{ padding: spacing(5), paddingTop: spacing(16) }}
       keyboardShouldPersistTaps="handled"
     >
-      <Text
+      <View
         style={{
-          color: colors.lumen,
-          fontSize: 28,
-          fontWeight: "800",
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        Enhance
-      </Text>
+        <Text
+          style={{
+            color: colors.lumen,
+            fontSize: 28,
+            fontWeight: "800",
+          }}
+        >
+          Enhance
+        </Text>
+        <Pressable
+          onPress={() => router.push("/history")}
+          hitSlop={10}
+          style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+        >
+          <Ionicons name="time-outline" size={24} color={colors.lumenDim} />
+        </Pressable>
+      </View>
       <Text style={{ color: colors.lumenDim, marginTop: 4, fontSize: 15 }}>
         Turn a lazy prompt into a great one.
       </Text>

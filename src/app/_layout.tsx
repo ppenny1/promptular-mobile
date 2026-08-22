@@ -17,6 +17,10 @@ export default function RootLayout() {
           name="prompt/[id]"
           options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
         />
+        <Stack.Screen
+          name="history"
+          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+        />
       </Stack>
     </>
   );
