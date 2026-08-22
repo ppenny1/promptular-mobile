@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 import { recordEnhanceAndMaybeAskReview } from "@/lib/reviewPrompt";
+import ErrorNotice, { friendlyError } from "@/components/ErrorNotice";
 
 const MODES = [
   { id: "general", label: "General" },
@@ -24,6 +25,37 @@ const MODES = [
   { id: "coding", label: "Coding" },
   { id: "writing", label: "Writing" },
 ] as const;
+
+interface ModeTip {
+  id: string;
+  tip: string;
+  example: string;
+}
+
+// Baked fallback; GET /api/modes overrides it live so wording and examples
+// can be tuned from the web repo without an app build.
+const DEFAULT_TIPS: ModeTip[] = [
+  {
+    id: "general",
+    tip: "Good for anything: questions, plans, research, advice.",
+    example: "help me plan a surprise 40th birthday party for my sister",
+  },
+  {
+    id: "image",
+    tip: "For AI art. Describe the subject; Enhance adds style, lighting, and composition.",
+    example: "a cozy cabin in snowy woods at night",
+  },
+  {
+    id: "coding",
+    tip: "For code. Say what you're building; Enhance adds inputs, outputs, and edge cases.",
+    example: "python script that renames my photos by the date they were taken",
+  },
+  {
+    id: "writing",
+    tip: "For emails, posts, and essays. Enhance adds audience, tone, and structure.",
+    example: "email asking my landlord to finally fix the heater",
+  },
+];
 
 interface EnhanceResponse {
   ok: boolean;
@@ -53,14 +85,27 @@ export default function EnhanceScreen() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<EnhanceResponse | null>(null);
   const [error, setError] = useState("");
+  const [errorRaw, setErrorRaw] = useState("");
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tips, setTips] = useState<ModeTip[]>(DEFAULT_TIPS);
+
+  useEffect(() => {
+    api<{ modes: ModeTip[] }>("/api/modes", { auth: false })
+      .then((res) => {
+        if (Array.isArray(res.modes) && res.modes.length > 0) setTips(res.modes);
+      })
+      .catch(() => {});
+  }, []);
+
+  const activeTip = tips.find((t) => t.id === mode);
 
   async function handleEnhance() {
     if (!prompt.trim() || loading) return;
     setLoading(true);
     setError("");
+    setErrorRaw("");
     setCopied(false);
     setSaved(false);
     try {
@@ -73,12 +118,20 @@ export default function EnhanceScreen() {
       // ride on milestones of it (3rd, 15th, 40th), never on failures.
       recordEnhanceAndMaybeAskReview();
     } catch (err) {
+      // Expected states get plain guidance; anything unexpected gets a
+      // friendly line plus the one-tap Report this issue flow.
       if (err instanceof ApiError && err.status === 401) {
         setError("Sign in on the Account tab to start enhancing.");
       } else if (err instanceof ApiError && err.status === 402) {
         setError("Not enough credits. Grab a pack on the Account tab.");
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError("That's a lot of enhancing! Give it a few seconds and try again.");
+      } else if (err instanceof ApiError && err.status === 502) {
+        setError("Enhancement didn't finish, and your credit was refunded. Try again.");
       } else {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+        const fe = friendlyError(err);
+        setError(fe.message);
+        setErrorRaw(fe.raw);
       }
     } finally {
       setLoading(false);
@@ -156,7 +209,16 @@ export default function EnhanceScreen() {
         {MODES.map((m) => (
           <Pressable
             key={m.id}
-            onPress={() => setMode(m.id)}
+            onPress={() => {
+              setMode(m.id);
+              // A mode switch starts a fresh round: the old result is safe
+              // in History, and the new mode's tip takes the stage.
+              setResult(null);
+              setError("");
+              setErrorRaw("");
+              setCopied(false);
+              setSaved(false);
+            }}
             style={{
               paddingHorizontal: 16,
               paddingVertical: 8,
@@ -261,9 +323,47 @@ export default function EnhanceScreen() {
       </Pressable>
 
       {error !== "" && (
-        <Text style={{ color: colors.danger, marginTop: spacing(4), fontSize: 14 }}>
-          {error}
-        </Text>
+        <ErrorNotice
+          message={error}
+          raw={errorRaw || undefined}
+          screen="Enhance"
+          onDismiss={() => {
+            setError("");
+            setErrorRaw("");
+          }}
+        />
+      )}
+
+      {!result && !loading && activeTip && (
+        <View
+          style={{
+            marginTop: spacing(5),
+            borderRadius: radius.card,
+            borderWidth: 1,
+            borderColor: colors.panelEdge,
+            backgroundColor: colors.panel,
+            padding: spacing(4),
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Ionicons name="bulb-outline" size={14} color={colors.spark} />
+            <Text style={{ color: colors.spark, fontWeight: "800", fontSize: 11, letterSpacing: 1 }}>
+              {MODES.find((m) => m.id === mode)?.label.toUpperCase()} MODE
+            </Text>
+          </View>
+          <Text style={{ color: colors.lumenDim, marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+            {activeTip.tip}
+          </Text>
+          <Pressable
+            onPress={() => setPrompt(activeTip.example)}
+            hitSlop={6}
+            style={{ marginTop: spacing(2), minHeight: 44, justifyContent: "center" }}
+          >
+            <Text style={{ color: colors.lumenDim, fontSize: 13, lineHeight: 19 }}>
+              Try: <Text style={{ color: colors.violet, fontWeight: "600" }}>&quot;{activeTip.example}&quot;</Text>
+            </Text>
+          </Pressable>
+        </View>
       )}
 
       {result && (
