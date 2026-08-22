@@ -167,7 +167,7 @@ export default function LibraryScreen() {
               <Ionicons
                 name={item.favorite ? "heart" : "heart-outline"}
                 size={22}
-                color={item.favorite ? colors.danger : colors.lumenDim}
+                color={item.favorite ? colors.heart : colors.lumenDim}
               />
             </Pressable>
           </Pressable>

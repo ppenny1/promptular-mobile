@@ -12,6 +12,7 @@ export const colors = {
   lumenDim: "#A5A0C2", // secondary text
   good: "#34D399",
   danger: "#F87171",
+  heart: "#8B5CF6", // favorites = brand violet; danger stays errors/delete
 } as const;
 
 export const radius = {

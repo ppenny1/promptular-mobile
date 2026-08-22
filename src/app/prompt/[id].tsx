@@ -224,7 +224,7 @@ export default function PromptDetailScreen() {
             <Ionicons
               name={prompt.favorite ? "heart" : "heart-outline"}
               size={24}
-              color={prompt.favorite ? colors.danger : colors.lumenDim}
+              color={prompt.favorite ? colors.heart : colors.lumenDim}
             />
           </Pressable>
           <Pressable
