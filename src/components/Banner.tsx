@@ -44,7 +44,24 @@ export default function Banner() {
     return () => sub.remove();
   }, [poll]);
 
-  if (!banner) return null;
+  if (!banner) {
+    // No banner: still mask the status bar zone so scrolling content never
+    // collides with the clock and battery. Solid ink, pinned on top.
+    return (
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: colors.ink,
+          zIndex: 10,
+        }}
+      />
+    );
+  }
   const style = STYLES[banner.severity] || STYLES.info;
 
   return (

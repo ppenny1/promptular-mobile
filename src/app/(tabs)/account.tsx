@@ -17,13 +17,14 @@ import {
   Linking,
   ActivityIndicator,
 } from "react-native";
+import { Share } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Ionicons } from "@expo/vector-icons";
 import { ensureGoogleConfigured } from "@/lib/googleAuth";
 import { colors, radius, spacing } from "@/lib/theme";
-import { api, ApiError, setToken, clearToken } from "@/lib/api";
+import { api, ApiError, setToken, clearToken, getToken, API_BASE } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import {
   CREDIT_PACKS,
@@ -55,6 +56,12 @@ export default function AccountScreen() {
   const [state, setState] = useState<"loading" | "ready" | "signedout">("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Import modal
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Promo code modal
   const [promoOpen, setPromoOpen] = useState(false);
@@ -261,6 +268,119 @@ export default function AccountScreen() {
       });
     } finally {
       setPromoBusy(false);
+    }
+  }
+
+  async function exportLibrary(format: "csv" | "json") {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/prompts/export?format=${format}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.status === 402) {
+        Alert.alert("Pro feature", "Export is part of Pro. Upgrade above to unlock it.");
+        return;
+      }
+      if (!res.ok) throw new Error("export failed");
+      const content =
+        format === "csv"
+          ? await res.text()
+          : JSON.stringify((await res.json()).prompts, null, 2);
+      await Share.share({ message: content });
+    } catch {
+      Alert.alert("Couldn't export", "Please try again.");
+    }
+  }
+
+  function chooseExport() {
+    Alert.alert("Export your library", "Pick a format. It opens the share sheet so you can save or send the file.", [
+      { text: "CSV (spreadsheets)", onPress: () => exportLibrary("csv") },
+      { text: "JSON (backups)", onPress: () => exportLibrary("json") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  // Minimal CSV parser handling quoted fields; header row maps columns.
+  function parseCsv(text: string): { title: string; text: string; tags?: string; collection?: string; favorite?: boolean }[] {
+    const rows: string[][] = [];
+    let field = "";
+    let row: string[] = [];
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"' && text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        row.push(field);
+        field = "";
+      } else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(field);
+        field = "";
+        if (row.some((c) => c.trim() !== "")) rows.push(row);
+        row = [];
+      } else {
+        field += ch;
+      }
+    }
+    row.push(field);
+    if (row.some((c) => c.trim() !== "")) rows.push(row);
+    if (rows.length < 2) return [];
+    const header = rows[0].map((h) => h.trim().toLowerCase());
+    const idx = (name: string) => header.indexOf(name);
+    return rows.slice(1).map((r) => ({
+      title: r[idx("title")] ?? "",
+      text: r[idx("text")] ?? "",
+      tags: idx("tags") >= 0 ? r[idx("tags")] : undefined,
+      collection: idx("collection") >= 0 ? r[idx("collection")] : undefined,
+      favorite: idx("favorite") >= 0 ? r[idx("favorite")] === "1" || r[idx("favorite")]?.toLowerCase() === "true" : undefined,
+    }));
+  }
+
+  async function runImport() {
+    if (!importText.trim() || importBusy) return;
+    setImportBusy(true);
+    setImportMsg(null);
+    try {
+      const raw = importText.trim();
+      let prompts: unknown[] = [];
+      if (raw.startsWith("[") || raw.startsWith("{")) {
+        const parsed = JSON.parse(raw);
+        prompts = Array.isArray(parsed) ? parsed : parsed.prompts || [];
+      } else {
+        prompts = parseCsv(raw);
+      }
+      if (prompts.length === 0) {
+        setImportMsg({ ok: false, text: "Couldn't find any prompts in that. Paste CSV with a header row, or JSON." });
+        return;
+      }
+      const res = await api<{ imported: number; skipped: number }>("/api/prompts/import", {
+        method: "POST",
+        body: { prompts },
+      });
+      setImportMsg({
+        ok: true,
+        text: `Imported ${res.imported} prompt${res.imported === 1 ? "" : "s"}${res.skipped ? `, skipped ${res.skipped} without a title or text` : ""}.`,
+      });
+      setImportText("");
+      load();
+    } catch (err) {
+      if (err instanceof ApiError && err.body?.error === "pro_required") {
+        setImportMsg({ ok: false, text: "Import is part of Pro. Upgrade to unlock it." });
+      } else {
+        setImportMsg({ ok: false, text: "Import failed. Check the format and try again." });
+      }
+    } finally {
+      setImportBusy(false);
     }
   }
 
@@ -505,6 +625,28 @@ export default function AccountScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
             </Pressable>
             <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
+            <Pressable onPress={chooseExport} style={row}>
+              <Ionicons name="download-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Export library
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
+            <Pressable
+              onPress={() => {
+                setImportMsg(null);
+                setImportOpen(true);
+              }}
+              style={row}
+            >
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Import prompts
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
             <Pressable onPress={handleRestore} style={row}>
               <Ionicons name="refresh-outline" size={18} color={colors.lumenDim} />
               <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
@@ -564,6 +706,106 @@ export default function AccountScreen() {
           </Pressable>
         </>
       )}
+
+      {/* Import prompts */}
+      <Modal
+        visible={importOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setImportOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.panel,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing(5),
+              paddingBottom: spacing(10),
+            }}
+          >
+            <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+              Import prompts
+            </Text>
+            <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+              Paste a CSV (with a header row: title, text, tags, collection) or
+              a JSON export. Collections are created automatically. Up to 500
+              prompts at a time.
+            </Text>
+            <TextInput
+              value={importText}
+              onChangeText={(t) => {
+                setImportText(t);
+                setImportMsg(null);
+              }}
+              multiline
+              placeholder="Paste your CSV or JSON here..."
+              placeholderTextColor={colors.lumenDim + "66"}
+              style={{
+                marginTop: spacing(3),
+                minHeight: 140,
+                maxHeight: 220,
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.panelEdge,
+                backgroundColor: colors.ink,
+                color: colors.lumen,
+                padding: spacing(3),
+                fontSize: 16,
+                textAlignVertical: "top",
+              }}
+            />
+            {importMsg && (
+              <Text
+                style={{
+                  color: importMsg.ok ? colors.good : colors.danger,
+                  marginTop: spacing(2),
+                  fontSize: 13,
+                }}
+              >
+                {importMsg.text}
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(4) }}>
+              <Pressable
+                onPress={() => setImportOpen(false)}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  borderWidth: 1,
+                  borderColor: colors.panelEdge,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  minHeight: 44,
+                }}
+              >
+                <Text style={{ color: colors.lumenDim, fontWeight: "700" }}>
+                  {importMsg?.ok ? "Done" : "Cancel"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={runImport}
+                disabled={importBusy || !importText.trim()}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  backgroundColor: colors.violet,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  opacity: importBusy || !importText.trim() ? 0.6 : 1,
+                  minHeight: 44,
+                }}
+              >
+                {importBusy ? (
+                  <ActivityIndicator size="small" color={colors.lumen} />
+                ) : (
+                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>Import</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Promo code */}
       <Modal
