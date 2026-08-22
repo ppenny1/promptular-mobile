@@ -19,6 +19,12 @@ import {
 } from "react-native";
 import { Share } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
+import {
+  readAsStringAsync,
+  writeAsStringAsync,
+  cacheDirectory,
+} from "expo-file-system/legacy";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Ionicons } from "@expo/vector-icons";
@@ -286,7 +292,14 @@ export default function AccountScreen() {
         format === "csv"
           ? await res.text()
           : JSON.stringify((await res.json()).prompts, null, 2);
-      await Share.share({ message: content });
+      // Write a named file so the share sheet says "promptular-export-...",
+      // not "text".
+      const date = new Date().toISOString().slice(0, 10);
+      const fileUri = `${cacheDirectory}promptular-export-${date}.${format}`;
+      await writeAsStringAsync(fileUri, content);
+      await Share.share(
+        Platform.OS === "ios" ? { url: fileUri } : { message: content }
+      );
     } catch {
       Alert.alert("Couldn't export", "Please try again.");
     }
@@ -344,6 +357,21 @@ export default function AccountScreen() {
       collection: idx("collection") >= 0 ? r[idx("collection")] : undefined,
       favorite: idx("favorite") >= 0 ? r[idx("favorite")] === "1" || r[idx("favorite")]?.toLowerCase() === "true" : undefined,
     }));
+  }
+
+  async function pickImportFile() {
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: ["text/csv", "text/comma-separated-values", "application/json", "text/plain"],
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      const content = await readAsStringAsync(picked.assets[0].uri);
+      setImportText(content);
+      setImportMsg(null);
+    } catch {
+      setImportMsg({ ok: false, text: "Couldn't read that file. Try a .csv or .json file." });
+    }
   }
 
   async function runImport() {
@@ -728,10 +756,30 @@ export default function AccountScreen() {
               Import prompts
             </Text>
             <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-              Paste a CSV (with a header row: title, text, tags, collection) or
-              a JSON export. Collections are created automatically. Up to 500
-              prompts at a time.
+              Bring prompts in from anywhere. Pick a .csv or .json file, or
+              paste the contents below. Collections are created automatically.
+              Up to 500 prompts at a time.
             </Text>
+            <Pressable
+              onPress={pickImportFile}
+              style={{
+                marginTop: spacing(3),
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.violet + "88",
+                paddingVertical: 13,
+                minHeight: 44,
+              }}
+            >
+              <Ionicons name="document-outline" size={16} color={colors.violet} />
+              <Text style={{ color: colors.violet, fontWeight: "700", fontSize: 14 }}>
+                Choose a file
+              </Text>
+            </Pressable>
             <TextInput
               value={importText}
               onChangeText={(t) => {
