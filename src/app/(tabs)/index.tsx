@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
+import { recordEnhanceAndMaybeAskReview } from "@/lib/reviewPrompt";
 
 const MODES = [
   { id: "general", label: "General" },
@@ -55,6 +56,9 @@ export default function EnhanceScreen() {
         body: { prompt, mode, strength },
       });
       setResult(res);
+      // A successful enhance is the app's happiest moment; review asks
+      // ride on milestones of it (3rd, 15th, 40th), never on failures.
+      recordEnhanceAndMaybeAskReview();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("Sign in on the Account tab to start enhancing.");

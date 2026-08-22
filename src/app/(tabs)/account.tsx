@@ -1,18 +1,44 @@
-// The Account tab. Apple Sign In wired end-to-end; Google lands once the
-// Google Cloud project + GOOGLE_CLIENT_IDS exist. Restore Purchases, Leave
-// a Review, and Delete Account complete this screen in later steps.
+// The Account tab: signed-in card (name, email, account id, provider,
+// plan), credits + prompts stats, credit pack store, Pro card, promo code
+// redemption, Restore Purchases, Leave a Review, Help, Sign out, and the
+// red Delete Account flow (Apple 5.1.1(v)). Purchases go through the
+// purchases lib, which degrades honestly until RevenueCat is wired in.
 
 import { useCallback, useState } from "react";
-import { View, Text, ScrollView, Pressable, Platform, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Pressable,
+  Platform,
+  Alert,
+  Modal,
+  Linking,
+  ActivityIndicator,
+} from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { Ionicons } from "@expo/vector-icons";
 import { ensureGoogleConfigured } from "@/lib/googleAuth";
 import { colors, radius, spacing } from "@/lib/theme";
 import { api, ApiError, setToken, clearToken } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
+import {
+  CREDIT_PACKS,
+  PRO_PRODUCT,
+  purchaseProduct,
+  restorePurchases,
+  PurchasesUnavailableError,
+} from "@/lib/purchases";
+
+// Real Apple App ID (ASC listing created Aug 22, 2026). The write-review
+// deep link works once the app is live. Play listing URL joins at Android time.
+const APP_STORE_ID = "6804114635";
 
 interface AccountUser {
+  id: number;
   name: string | null;
   email: string | null;
   authProvider: string;
@@ -26,6 +52,12 @@ export default function AccountScreen() {
   const [state, setState] = useState<"loading" | "ready" | "signedout">("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Promo code modal
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoMsg, setPromoMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +112,7 @@ export default function AccountScreen() {
       await setToken(res.token);
       setUser(res.user);
       setState("ready");
+      load();
     } catch (err) {
       // User canceling the Apple sheet is not an error worth showing.
       const code = (err as { code?: string }).code;
@@ -104,33 +137,27 @@ export default function AccountScreen() {
       ensureGoogleConfigured();
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const result = await GoogleSignin.signIn();
-      const idToken =
-        result.type === "success" ? result.data.idToken : null;
+      const idToken = result.type === "success" ? result.data.idToken : null;
       if (!idToken) {
         // User closed the sheet; not an error worth showing.
         return;
       }
-      const name =
-        result.type === "success" ? result.data.user.name ?? null : null;
+      const name = result.type === "success" ? result.data.user.name ?? null : null;
 
       const deviceId = await getDeviceId();
-      const res = await api<{ token: string; user: AccountUser }>(
-        "/api/auth/google",
-        {
-          method: "POST",
-          auth: false,
-          body: { idToken, name, platform: Platform.OS, deviceId },
-        }
-      );
+      const res = await api<{ token: string; user: AccountUser }>("/api/auth/google", {
+        method: "POST",
+        auth: false,
+        body: { idToken, name, platform: Platform.OS, deviceId },
+      });
       await setToken(res.token);
       setUser(res.user);
       setState("ready");
+      load();
     } catch (err) {
       console.log("Google sign-in error:", err);
       setError(
-        err instanceof ApiError
-          ? err.message
-          : "Sign in didn't work. Please try again."
+        err instanceof ApiError ? err.message : "Sign in didn't work. Please try again."
       );
     } finally {
       setBusy(false);
@@ -152,10 +179,116 @@ export default function AccountScreen() {
     ]);
   }
 
+  async function handleBuy(productId: string) {
+    try {
+      await purchaseProduct(productId);
+      load();
+    } catch (err) {
+      if (err instanceof PurchasesUnavailableError) {
+        Alert.alert(
+          "Purchases coming soon",
+          "Buying isn't switched on in this build yet. It arrives with the App Store release."
+        );
+      } else {
+        Alert.alert("Purchase didn't finish", "You weren't charged. Please try again.");
+      }
+    }
+  }
+
+  async function handleRestore() {
+    try {
+      await restorePurchases();
+      load();
+      Alert.alert("Restored", "Your purchases are back on this device.");
+    } catch (err) {
+      if (err instanceof PurchasesUnavailableError) {
+        Alert.alert(
+          "Purchases coming soon",
+          "Restore works once purchases are switched on in the App Store release."
+        );
+      } else {
+        Alert.alert("Couldn't restore", "Please try again.");
+      }
+    }
+  }
+
+  function handleLeaveReview() {
+    if (Platform.OS === "ios") {
+      if (!APP_STORE_ID) {
+        Alert.alert("Almost", "The App Store page goes live at launch. Thanks for wanting to review!");
+        return;
+      }
+      Linking.openURL(
+        `https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review`
+      ).catch(() => {});
+    } else {
+      Linking.openURL(
+        "https://play.google.com/store/apps/details?id=com.decalvenue.promptular"
+      ).catch(() => {});
+    }
+  }
+
+  async function redeemPromo() {
+    if (!promoCode.trim() || promoBusy) return;
+    setPromoBusy(true);
+    setPromoMsg(null);
+    try {
+      const res = await api<{ balance: number | null; credits?: number }>("/api/redeem", {
+        method: "POST",
+        body: { code: promoCode.trim() },
+      });
+      setPromoMsg({ ok: true, text: "Code redeemed! Your credits are updated." });
+      setPromoCode("");
+      if (user && res.balance !== null && res.balance !== undefined) {
+        setUser({ ...user, creditBalance: res.balance });
+      }
+      load();
+    } catch (err) {
+      setPromoMsg({
+        ok: false,
+        text: err instanceof ApiError ? err.message : "Couldn't redeem. Try again.",
+      });
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      "Delete your account?",
+      "This permanently deletes your account, prompts, collections, history, and remaining credits. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Forever",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api("/api/account/delete", { method: "POST" });
+              await clearToken();
+              setUser(null);
+              setState("signedout");
+            } catch {
+              Alert.alert("Couldn't delete", "Please try again or email promptular@appsthathelp.com.");
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  const row = {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing(3),
+    paddingVertical: 14,
+    minHeight: 44,
+  };
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.ink }}
-      contentContainerStyle={{ padding: spacing(5), paddingTop: spacing(16) }}
+      contentContainerStyle={{ padding: spacing(5), paddingTop: spacing(16), paddingBottom: spacing(10) }}
     >
       <Text style={{ color: colors.lumen, fontSize: 28, fontWeight: "800" }}>
         Account
@@ -180,12 +313,8 @@ export default function AccountScreen() {
 
           {Platform.OS === "ios" && (
             <AppleAuthentication.AppleAuthenticationButton
-              buttonType={
-                AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
-              }
-              buttonStyle={
-                AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-              }
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
               cornerRadius={12}
               style={{ height: 48, marginTop: spacing(5) }}
               onPress={handleAppleSignIn}
@@ -215,12 +344,12 @@ export default function AccountScreen() {
               {error}
             </Text>
           )}
-
         </View>
       )}
 
       {state === "ready" && user && (
         <>
+          {/* Who is signed in */}
           <View
             style={{
               marginTop: spacing(5),
@@ -230,15 +359,21 @@ export default function AccountScreen() {
             }}
           >
             <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 17 }}>
-              {user.name || user.email || "Signed in"}
+              {user.name || "Signed in"}
             </Text>
-            <Text style={{ color: colors.lumenDim, marginTop: 4, fontSize: 13 }}>
+            {user.email && (
+              <Text style={{ color: colors.lumenDim, marginTop: 4, fontSize: 14 }}>
+                {user.email}
+              </Text>
+            )}
+            <Text style={{ color: colors.lumenDim, marginTop: 4, fontSize: 12 }}>
               Signed in with {user.authProvider === "apple" ? "Apple" : "Google"}
               {" · "}
               {user.isPro ? "Pro" : "Free"}
             </Text>
           </View>
 
+          {/* Stats */}
           <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(3) }}>
             <View
               style={{
@@ -274,6 +409,119 @@ export default function AccountScreen() {
             </View>
           </View>
 
+          {/* Credit packs */}
+          <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 17, marginTop: spacing(6) }}>
+            Get more credits
+          </Text>
+          <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+            1 credit per enhance, 2 for a Full Rework. Credits never expire.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing(3), marginTop: spacing(3) }}>
+            {CREDIT_PACKS.map((pack) => (
+              <Pressable
+                key={pack.id}
+                onPress={() => handleBuy(pack.id)}
+                style={{
+                  width: "47.5%",
+                  borderRadius: radius.card,
+                  backgroundColor: colors.panel,
+                  borderWidth: 1,
+                  borderColor: pack.tag ? colors.violet + "88" : colors.panelEdge,
+                  padding: spacing(4),
+                  alignItems: "center",
+                  minHeight: 44,
+                }}
+              >
+                {pack.tag && (
+                  <Text style={{ color: colors.violet, fontWeight: "800", fontSize: 10, letterSpacing: 1 }}>
+                    {pack.tag.toUpperCase()}
+                  </Text>
+                )}
+                <Text style={{ color: colors.lumen, fontSize: 20, fontWeight: "800", marginTop: pack.tag ? 4 : 0 }}>
+                  {pack.credits}
+                </Text>
+                <Text style={{ color: colors.lumenDim, fontSize: 11 }}>credits</Text>
+                <Text style={{ color: colors.spark, fontWeight: "800", fontSize: 14, marginTop: 6 }}>
+                  {pack.price}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Pro */}
+          {!user.isPro && (
+            <Pressable
+              onPress={() => handleBuy(PRO_PRODUCT.id)}
+              style={{
+                marginTop: spacing(4),
+                borderRadius: radius.card,
+                backgroundColor: colors.violet + "22",
+                borderWidth: 1,
+                borderColor: colors.violet,
+                padding: spacing(5),
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 17 }}>
+                  Promptular Pro
+                </Text>
+                <Text style={{ color: colors.spark, fontWeight: "800", fontSize: 17 }}>
+                  {PRO_PRODUCT.price}
+                </Text>
+              </View>
+              <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
+                One-time purchase, yours forever. Unlimited prompts, collections,
+                variables, version history, import and export, custom platforms,
+                plus 50 bonus credits included.
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Rows */}
+          <View
+            style={{
+              marginTop: spacing(6),
+              borderRadius: radius.card,
+              backgroundColor: colors.panel,
+              paddingHorizontal: spacing(4),
+            }}
+          >
+            <Pressable onPress={() => setPromoOpen(true)} style={row}>
+              <Ionicons name="gift-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Redeem a code
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
+            <Pressable onPress={handleRestore} style={row}>
+              <Ionicons name="refresh-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Restore Purchases
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
+            <Pressable onPress={handleLeaveReview} style={row}>
+              <Ionicons name="star-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Leave a Review
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
+            <Pressable
+              onPress={() => Linking.openURL("https://www.promptular.app/help").catch(() => {})}
+              style={row}
+            >
+              <Ionicons name="help-circle-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Help
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
+            </Pressable>
+          </View>
+
           <Pressable
             onPress={handleSignOut}
             style={{
@@ -290,8 +538,119 @@ export default function AccountScreen() {
               Sign out
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={confirmDeleteAccount}
+            style={{ marginTop: spacing(5), alignItems: "center", minHeight: 44, justifyContent: "center" }}
+          >
+            <Text
+              style={{
+                color: colors.danger,
+                fontWeight: "700",
+                fontSize: 14,
+                textDecorationLine: "underline",
+              }}
+            >
+              Delete Account
+            </Text>
+          </Pressable>
         </>
       )}
+
+      {/* Promo code */}
+      <Modal
+        visible={promoOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPromoOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.panel,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing(5),
+              paddingBottom: spacing(10),
+            }}
+          >
+            <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+              Redeem a code
+            </Text>
+            <TextInput
+              value={promoCode}
+              onChangeText={(t) => {
+                setPromoCode(t);
+                setPromoMsg(null);
+              }}
+              placeholder="Enter your code..."
+              placeholderTextColor={colors.lumenDim + "66"}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              autoFocus
+              style={{
+                marginTop: spacing(3),
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.panelEdge,
+                backgroundColor: colors.ink,
+                color: colors.lumen,
+                padding: spacing(3),
+                fontSize: 16,
+                minHeight: 44,
+              }}
+            />
+            {promoMsg && (
+              <Text
+                style={{
+                  color: promoMsg.ok ? colors.good : colors.danger,
+                  marginTop: spacing(2),
+                  fontSize: 13,
+                }}
+              >
+                {promoMsg.text}
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(4) }}>
+              <Pressable
+                onPress={() => setPromoOpen(false)}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  borderWidth: 1,
+                  borderColor: colors.panelEdge,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  minHeight: 44,
+                }}
+              >
+                <Text style={{ color: colors.lumenDim, fontWeight: "700" }}>
+                  {promoMsg?.ok ? "Done" : "Cancel"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={redeemPromo}
+                disabled={promoBusy || !promoCode.trim()}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  backgroundColor: colors.violet,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  opacity: promoBusy || !promoCode.trim() ? 0.6 : 1,
+                  minHeight: 44,
+                }}
+              >
+                {promoBusy ? (
+                  <ActivityIndicator size="small" color={colors.lumen} />
+                ) : (
+                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>Redeem</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
