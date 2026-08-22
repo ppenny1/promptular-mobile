@@ -12,6 +12,7 @@
     "ios": {
       "bundleIdentifier": "com.decalvenue.promptular",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "icon": "./assets/images/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -33,6 +34,13 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.526677221242-5n3p4i2unp85cstlgcbqt7idho8f8gi7"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -48,8 +56,7 @@
             "useFrameworks": "static"
           }
         }
-      ],
-      "expo-secure-store"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

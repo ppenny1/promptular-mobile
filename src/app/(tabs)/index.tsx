@@ -37,12 +37,15 @@ export default function EnhanceScreen() {
   const [result, setResult] = useState<EnhanceResponse | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function handleEnhance() {
     if (!prompt.trim() || loading) return;
     setLoading(true);
     setError("");
     setCopied(false);
+    setSaved(false);
     try {
       const res = await api<EnhanceResponse>("/api/enhance", {
         method: "POST",
@@ -59,6 +62,32 @@ export default function EnhanceScreen() {
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!result || saving || saved) return;
+    setSaving(true);
+    try {
+      // Title from the original ask, tidied: "write an email to my landlord"
+      // becomes "Write an email to my landlord".
+      const raw = prompt.trim().replace(/\s+/g, " ");
+      const title =
+        (raw.charAt(0).toUpperCase() + raw.slice(1)).slice(0, 60) +
+        (raw.length > 60 ? "..." : "");
+      await api("/api/prompts", {
+        method: "POST",
+        body: { title, text: result.enhanced },
+      });
+      setSaved(true);
+    } catch (err) {
+      if (err instanceof ApiError && err.body?.error === "prompt_limit") {
+        setError("Your free library is full (25 prompts). Pro is unlimited.");
+      } else {
+        setError("Couldn't save. Please try again.");
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -226,21 +255,40 @@ export default function EnhanceScreen() {
             <Text style={{ color: colors.lumenDim, fontSize: 12 }}>
               {result.balance} credits left
             </Text>
-            <Pressable
-              onPress={handleCopy}
-              style={{
-                backgroundColor: colors.ink,
-                borderRadius: radius.button,
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                minHeight: 44,
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
-                {copied ? "✓ Copied" : "Copy"}
-              </Text>
-            </Pressable>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable
+                onPress={handleSave}
+                disabled={saving || saved}
+                style={{
+                  backgroundColor: saved ? colors.ink : colors.violet,
+                  borderRadius: radius.button,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  minHeight: 44,
+                  justifyContent: "center",
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ color: saved ? colors.good : colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                  {saved ? "✓ Saved" : saving ? "Saving..." : "Save"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleCopy}
+                style={{
+                  backgroundColor: colors.ink,
+                  borderRadius: radius.button,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  minHeight: 44,
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                  {copied ? "✓ Copied" : "Copy"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       )}
