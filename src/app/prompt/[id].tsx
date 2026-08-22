@@ -265,6 +265,50 @@ export default function PromptDetailScreen() {
     }
   }
 
+  async function handleShare() {
+    if (!prompt) return;
+    if (prompt.share_slug) {
+      // Already shared: offer the link again or turn sharing off.
+      const link = `https://www.promptular.app/p/${prompt.share_slug}`;
+      Alert.alert("Shared prompt", "Anyone with the link can view and copy this prompt.", [
+        {
+          text: "Copy link",
+          onPress: async () => {
+            await Clipboard.setStringAsync(link);
+          },
+        },
+        {
+          text: "Stop sharing",
+          style: "destructive",
+          onPress: async () => {
+            await api(`/api/prompts/${prompt.id}`, {
+              method: "PUT",
+              body: { share: false },
+            }).catch(() => {});
+            setPrompt({ ...prompt, share_slug: null });
+          },
+        },
+        { text: "Done", style: "cancel" },
+      ]);
+      return;
+    }
+    try {
+      const res = await api<{ shareSlug: string }>(`/api/prompts/${prompt.id}`, {
+        method: "PUT",
+        body: { share: true },
+      });
+      setPrompt({ ...prompt, share_slug: res.shareSlug });
+      const link = `https://www.promptular.app/p/${res.shareSlug}`;
+      await Clipboard.setStringAsync(link);
+      Alert.alert(
+        "Link copied",
+        "Anyone with the link can view and copy this prompt. Turn sharing off anytime from the share icon."
+      );
+    } catch {
+      Alert.alert("Couldn't share", "Please try again.");
+    }
+  }
+
   async function toggleFavorite() {
     if (!prompt) return;
     const next = prompt.favorite ? 0 : 1;
@@ -403,6 +447,13 @@ export default function PromptDetailScreen() {
               name={prompt.favorite ? "heart" : "heart-outline"}
               size={24}
               color={prompt.favorite ? colors.heart : colors.lumenDim}
+            />
+          </Pressable>
+          <Pressable onPress={handleShare} hitSlop={12} style={{ minHeight: 44, justifyContent: "center" }}>
+            <Ionicons
+              name={prompt.share_slug ? "link" : "share-outline"}
+              size={22}
+              color={prompt.share_slug ? colors.violet : colors.lumenDim}
             />
           </Pressable>
           <Pressable
