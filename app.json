@@ -64,13 +64,38 @@
             "NSExtensionActivationSupportsText": true,
             "NSExtensionActivationSupportsWebURLWithMaxCount": 1
           },
-          "androidIntentFilters": ["text/*"]
+          "androidIntentFilters": [
+            "text/*"
+          ]
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "ShareExtension",
+                  "bundleIdentifier": "com.decalvenue.promptular.share-extension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.decalvenue.promptular"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "d6698fd3-ceed-4537-9f24-1e2c7260ef49"
+      }
     }
   }
 }

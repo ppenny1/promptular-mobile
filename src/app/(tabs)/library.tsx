@@ -217,8 +217,8 @@ export default function LibraryScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ marginTop: spacing(3), flexGrow: 0 }}
-          contentContainerStyle={{ paddingHorizontal: spacing(5), gap: 8 }}
+          style={{ marginTop: spacing(3), flexGrow: 0, height: 42 }}
+          contentContainerStyle={{ paddingHorizontal: spacing(5), gap: 8, alignItems: "center" }}
         >
           <Pressable onPress={() => setAndLoad({ type: "all" })} style={chipStyle(filter.type === "all")}>
             <Text style={chipText(filter.type === "all")}>All Prompts</Text>

@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { Share } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
+import Constants from "expo-constants";
 import * as DocumentPicker from "expo-document-picker";
 import {
   readAsStringAsync,
@@ -732,6 +733,17 @@ export default function AccountScreen() {
               Delete Account
             </Text>
           </Pressable>
+
+          <Text
+            style={{
+              marginTop: spacing(5),
+              textAlign: "center",
+              color: colors.lumenDim + "88",
+              fontSize: 12,
+            }}
+          >
+            Promptular v{Constants.expoConfig?.version || "1.0.0"}
+          </Text>
         </>
       )}
 

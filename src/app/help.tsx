@@ -21,18 +21,31 @@ interface HelpSection {
   items: { q: string; a: string }[];
 }
 
+interface HelpFooter {
+  title: string;
+  body: string;
+}
+
+// Fallback if the API response predates the footer field.
+const DEFAULT_FOOTER: HelpFooter = {
+  title: "Still stuck or have an idea?",
+  body: "Tell us what's broken or what you wish Promptular could do. Feature requests shape what we build next, and a human answers every email.",
+};
+
 export default function HelpScreen() {
   const router = useRouter();
   const [sections, setSections] = useState<HelpSection[]>([]);
+  const [footer, setFooter] = useState<HelpFooter>(DEFAULT_FOOTER);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await api<{ sections: HelpSection[] }>("/api/help", {
+      const res = await api<{ sections: HelpSection[]; footer?: HelpFooter }>("/api/help", {
         auth: false,
       });
       setSections(res.sections);
+      if (res.footer?.title && res.footer?.body) setFooter(res.footer);
       setState("ready");
     } catch {
       setState("error");
@@ -164,10 +177,10 @@ export default function HelpScreen() {
             }}
           >
             <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 15 }}>
-              Still stuck?
+              {footer.title}
             </Text>
             <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
-              Email us and a human answers.
+              {footer.body}
             </Text>
             <Pressable
               onPress={() =>
