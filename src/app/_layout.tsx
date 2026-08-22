@@ -29,6 +29,10 @@ export default function RootLayout() {
           name="help"
           options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
         />
+        <Stack.Screen
+          name="templates"
+          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+        />
       </Stack>
     </>
   );

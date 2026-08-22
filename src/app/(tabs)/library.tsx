@@ -143,28 +143,51 @@ export default function LibraryScreen() {
             Library
           </Text>
           {state === "ready" && (
-            <Pressable
-              onPress={() => {
-                setNewError("");
-                setNewOpen(true);
-              }}
-              hitSlop={8}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-                backgroundColor: colors.violet,
-                borderRadius: radius.button,
-                paddingHorizontal: 14,
-                minHeight: 38,
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="add" size={16} color={colors.lumen} />
-              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
-                New
-              </Text>
-            </Pressable>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Pressable
+                onPress={() => router.push("/templates")}
+                hitSlop={8}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  backgroundColor: colors.panel,
+                  borderWidth: 1,
+                  borderColor: colors.panelEdge,
+                  borderRadius: radius.button,
+                  paddingHorizontal: 14,
+                  minHeight: 38,
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="sparkles-outline" size={14} color={colors.spark} />
+                <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                  Templates
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setNewError("");
+                  setNewOpen(true);
+                }}
+                hitSlop={8}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  backgroundColor: colors.violet,
+                  borderRadius: radius.button,
+                  paddingHorizontal: 14,
+                  minHeight: 38,
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="add" size={16} color={colors.lumen} />
+                <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                  New
+                </Text>
+              </Pressable>
+            </View>
           )}
         </View>
         <TextInput
@@ -226,11 +249,35 @@ export default function LibraryScreen() {
         </Text>
       )}
       {state === "ready" && prompts.length === 0 && (
-        <Text style={{ color: colors.lumenDim, padding: spacing(5), fontSize: 15 }}>
-          {filter.type === "all" && !q
-            ? "No prompts yet. Enhance something and save it, and it lands here."
-            : "Nothing matches this view yet."}
-        </Text>
+        <View style={{ padding: spacing(5) }}>
+          <Text style={{ color: colors.lumenDim, fontSize: 15, lineHeight: 22 }}>
+            {filter.type === "all" && !q
+              ? "No prompts yet. Enhance something and save it, add your own with New, or start from a ready-made template."
+              : "Nothing matches this view yet."}
+          </Text>
+          {filter.type === "all" && !q && (
+            <Pressable
+              onPress={() => router.push("/templates")}
+              style={{
+                marginTop: spacing(4),
+                alignSelf: "flex-start",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: colors.violet,
+                borderRadius: radius.button,
+                paddingHorizontal: 16,
+                minHeight: 44,
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="sparkles-outline" size={15} color={colors.lumen} />
+              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 14 }}>
+                Browse templates
+              </Text>
+            </Pressable>
+          )}
+        </View>
       )}
 
       <FlatList

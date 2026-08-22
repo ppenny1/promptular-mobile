@@ -52,15 +52,36 @@ it displays what the API returns.
   /api/account/delete then router.replace to sign-in), Restore Purchases,
   review prompts + Leave a Review row, provider-aware signed-in card.
 
-## Still to build (as of scaffold)
+## Current state (Aug 23, 2026): feature set nearly complete
 
-Auth screens (Apple + Google, expo-apple-authentication +
-@react-native-google-signin/google-signin; GOOGLE_CLIENT_IDS env on web
-side not set yet), save-to-library from Enhance, prompt detail + variables
-({{name}} fill-in form), Launch flow (copy + deep link via /api/platforms),
-collections UI, paywall + RevenueCat (react-native-purchases; RC project
-not created yet; webhook already live), share extension (iOS) + share
-target (Android), enhance history screen, banner polling, review prompts.
+Tabs: Enhance | Library | Collections | Account. BUILT AND VERIFIED in
+simulator: Apple + Google Sign In (Apple only verifiable on real device;
+simulator throws -7003, known and expected), enhance with strength picker,
+save-to-library, enhance history modal (clock icon, persistent In Library
+state via enhance_history.prompt_id), library with New-prompt creation +
+search + favorites (violet heart, own 44px column) + three-chip bar (All
+Prompts | Favorites | Collections), Collections tab + /collection/[id] +
+move-to-collection picker, prompt detail (share link button, edit, delete,
+{{variables}} fill form, Launch with live prefill via /api/platforms,
+Enhance-this-prompt with Replace/Keep + version history), custom platform
+management (add/edit/remove, spark-yellow dot, hold to edit, Pro-gated),
+templates browser (/templates modal fed live from GET /api/templates),
+in-app Help (/help modal fed live from GET /api/help), full Account tab
+(credit pack grid + Pro card wired to REAL RevenueCat purchases via
+src/lib/purchases.ts, iOS key appl_HzxWGqMNgFLhCQhmtGUqbhWidwp, Restore,
+Redeem code, Leave a Review deep link id6804114635, red Delete Account
+flow), review prompts (expo-store-review at 3rd/15th/40th enhance).
+
+ASC: app id 6804114635 with all 5 IAP products created (Prepare for
+Submission). RevenueCat project proj197fef68 fully configured.
+
+## Still to build
+
+Share extension (iOS) + share target (Android), banner polling, TestFlight
+prep (IAP review screenshots from the paywall, seed review data, review
+notes, EAS build). Sandbox purchase verification needs the webhook to
+reach the new backend (www still serves the legacy site until the domain
+flips). Android: everything Play-side, plus the goog_ key in purchases.ts.
 
 Git: dev = working branch, main = release. Same workflow as all repos.
 The full spec lives in the Promptular Claude project instructions; current
