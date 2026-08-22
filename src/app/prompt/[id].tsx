@@ -12,6 +12,7 @@ import {
   Alert,
   Linking,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -37,12 +38,13 @@ interface CollectionRow {
 }
 
 interface PlatformDef {
-  id?: string;
+  id?: string | number;
   name: string;
   web?: string;
   url?: string;
   prefill?: string;
   color?: string;
+  isCustom?: boolean;
 }
 
 // Prompts longer than this go clipboard-only even on prefill platforms;
@@ -70,6 +72,33 @@ export default function PromptDetailScreen() {
   // Collection picker state
   const [collections, setCollections] = useState<CollectionRow[]>([]);
   const [colPickerOpen, setColPickerOpen] = useState(false);
+
+  // Custom platform form state (create and edit share the sheet)
+  const [addPlatOpen, setAddPlatOpen] = useState(false);
+  const [editPlatId, setEditPlatId] = useState<number | null>(null);
+  const [platName, setPlatName] = useState("");
+  const [platUrl, setPlatUrl] = useState("");
+  const [platBusy, setPlatBusy] = useState(false);
+  const [platError, setPlatError] = useState("");
+
+  function mergePlatforms(res: { platforms: PlatformDef[]; custom: PlatformDef[] }) {
+    setPlatforms([
+      ...res.platforms,
+      ...res.custom.map((c) => ({ ...c, isCustom: true })),
+    ]);
+  }
+
+  // Enhance-this-prompt state
+  const [enhanceOpen, setEnhanceOpen] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhanceError, setEnhanceError] = useState("");
+  const [enhanceResult, setEnhanceResult] = useState<{
+    enhanced: string;
+    why: string;
+    balance: number;
+  } | null>(null);
+  const [replacing, setReplacing] = useState(false);
+  const [resultCopied, setResultCopied] = useState(false);
 
   // Launch flow state
   const [platforms, setPlatforms] = useState<PlatformDef[]>([]);
@@ -128,6 +157,111 @@ export default function PromptDetailScreen() {
     } catch {
       setPrompt((p) => (p ? { ...p, collection_id: prev } : p));
       Alert.alert("Couldn't move", "Please try again.");
+    }
+  }
+
+  async function saveCustomPlatform() {
+    if (!platName.trim() || !platUrl.trim() || platBusy) return;
+    setPlatBusy(true);
+    setPlatError("");
+    try {
+      let url = platUrl.trim();
+      if (!/^https?:\/\//.test(url)) url = `https://${url}`;
+      if (editPlatId !== null) {
+        await api(`/api/platforms/${editPlatId}`, {
+          method: "PUT",
+          body: { name: platName.trim(), url },
+        });
+      } else {
+        await api("/api/platforms", {
+          method: "POST",
+          body: { name: platName.trim(), url },
+        });
+      }
+      // Refresh the list so the change appears immediately.
+      const res = await api<{ platforms: PlatformDef[]; custom: PlatformDef[] }>(
+        "/api/platforms"
+      );
+      mergePlatforms(res);
+      setAddPlatOpen(false);
+      setEditPlatId(null);
+      setPlatName("");
+      setPlatUrl("");
+    } catch (err) {
+      const apiErr = err as { status?: number; body?: { error?: string }; message?: string };
+      if (apiErr.body?.error === "pro_required") {
+        setPlatError("Custom platforms are a Pro feature. Upgrade on the Account tab.");
+      } else {
+        setPlatError(apiErr.message || "Couldn't save. Check the name and URL.");
+      }
+    } finally {
+      setPlatBusy(false);
+    }
+  }
+
+  function confirmDeletePlatform() {
+    if (editPlatId === null) return;
+    const platId = editPlatId;
+    Alert.alert("Remove this platform?", "It disappears from your Launch menu everywhere.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          await api(`/api/platforms/${platId}`, { method: "DELETE" }).catch(() => {});
+          const res = await api<{ platforms: PlatformDef[]; custom: PlatformDef[] }>(
+            "/api/platforms"
+          ).catch(() => null);
+          if (res) mergePlatforms(res);
+          setAddPlatOpen(false);
+          setEditPlatId(null);
+          setPlatName("");
+          setPlatUrl("");
+        },
+      },
+    ]);
+  }
+
+  async function runEnhance(strength: "light" | "full") {
+    if (!prompt || enhancing) return;
+    setEnhancing(true);
+    setEnhanceError("");
+    try {
+      const res = await api<{ enhanced: string; why: string; balance: number }>(
+        "/api/enhance",
+        {
+          method: "POST",
+          body: { prompt: prompt.text, mode: "general", strength },
+        }
+      );
+      setEnhanceResult(res);
+    } catch (err) {
+      const apiErr = err as { status?: number; message?: string };
+      if (apiErr.status === 402) {
+        setEnhanceError("Not enough credits. Grab a pack on the Account tab.");
+      } else {
+        setEnhanceError("Enhancement didn't work. Please try again.");
+      }
+    } finally {
+      setEnhancing(false);
+    }
+  }
+
+  async function replaceWithEnhanced() {
+    if (!prompt || !enhanceResult || replacing) return;
+    setReplacing(true);
+    try {
+      const res = await api<{ prompt: PromptData }>(`/api/prompts/${prompt.id}`, {
+        method: "PUT",
+        body: { text: enhanceResult.enhanced },
+      });
+      setPrompt(res.prompt);
+      setEnhanceOpen(false);
+      setEnhanceResult(null);
+    } catch {
+      Alert.alert("Couldn't update", "Please try again.");
+    } finally {
+      setReplacing(false);
     }
   }
 
@@ -194,7 +328,7 @@ export default function PromptDetailScreen() {
         const res = await api<{ platforms: PlatformDef[]; custom: PlatformDef[] }>(
           "/api/platforms"
         );
-        setPlatforms([...res.platforms, ...res.custom]);
+        mergePlatforms(res);
       } catch {
         Alert.alert("Couldn't load platforms", "Check your connection.");
         return;
@@ -425,6 +559,29 @@ export default function PromptDetailScreen() {
           </Pressable>
 
           <Pressable
+            onPress={() => {
+              setEnhanceError("");
+              setEnhanceResult(null);
+              setEnhanceOpen(true);
+            }}
+            style={{
+              marginTop: spacing(3),
+              borderRadius: radius.button,
+              backgroundColor: colors.violet,
+              paddingVertical: 14,
+              alignItems: "center",
+              minHeight: 44,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="flash-outline" size={16} color={colors.lumen} />
+              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 14 }}>
+                Enhance this prompt
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
             onPress={() => handleCopy(prompt.text)}
             style={{
               marginTop: spacing(3),
@@ -442,6 +599,168 @@ export default function PromptDetailScreen() {
           </Pressable>
         </>
       )}
+
+      {/* Enhance this prompt */}
+      <Modal
+        visible={enhanceOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !enhancing && setEnhanceOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.panel,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing(5),
+              paddingBottom: spacing(10),
+              maxHeight: "85%",
+            }}
+          >
+            {!enhanceResult ? (
+              <>
+                <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+                  Enhance this prompt
+                </Text>
+                <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+                  AI rewrites your saved prompt into a stronger version. You
+                  choose whether to keep it.
+                </Text>
+                {enhancing ? (
+                  <View style={{ paddingVertical: spacing(8), alignItems: "center" }}>
+                    <ActivityIndicator color={colors.violet} />
+                    <Text style={{ color: colors.lumenDim, marginTop: spacing(3), fontSize: 13 }}>
+                      Enhancing...
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ marginTop: spacing(4), gap: spacing(3) }}>
+                    <Pressable
+                      onPress={() => runEnhance("light")}
+                      style={{
+                        borderRadius: radius.card,
+                        borderWidth: 1,
+                        borderColor: colors.violet,
+                        padding: spacing(4),
+                      }}
+                    >
+                      <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 15 }}>
+                        Light Touch
+                      </Text>
+                      <Text style={{ color: colors.lumenDim, fontSize: 12, marginTop: 2 }}>
+                        Quick polish. 1 credit.
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => runEnhance("full")}
+                      style={{
+                        borderRadius: radius.card,
+                        borderWidth: 1,
+                        borderColor: colors.panelEdge,
+                        padding: spacing(4),
+                      }}
+                    >
+                      <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 15 }}>
+                        Full Rework
+                      </Text>
+                      <Text style={{ color: colors.lumenDim, fontSize: 12, marginTop: 2 }}>
+                        Deep rewrite with the bigger model. 2 credits.
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+                {enhanceError !== "" && (
+                  <Text style={{ color: colors.danger, marginTop: spacing(3), fontSize: 13 }}>
+                    {enhanceError}
+                  </Text>
+                )}
+                {!enhancing && (
+                  <Pressable
+                    onPress={() => setEnhanceOpen(false)}
+                    style={{ marginTop: spacing(4), alignItems: "center", minHeight: 44, justifyContent: "center" }}
+                  >
+                    <Text style={{ color: colors.lumenDim, fontWeight: "700", fontSize: 14 }}>
+                      Cancel
+                    </Text>
+                  </Pressable>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={{ color: colors.violet, fontWeight: "800", fontSize: 11, letterSpacing: 1 }}>
+                  ENHANCED VERSION
+                </Text>
+                <ScrollView style={{ marginTop: spacing(2), maxHeight: 320 }}>
+                  <Text style={{ color: colors.lumen, fontSize: 14, lineHeight: 21 }}>
+                    {enhanceResult.enhanced}
+                  </Text>
+                  <Text style={{ color: colors.good, marginTop: spacing(2), fontSize: 12 }}>
+                    {enhanceResult.why}
+                  </Text>
+                </ScrollView>
+                <Text style={{ color: colors.lumenDim, fontSize: 12, marginTop: spacing(2) }}>
+                  {enhanceResult.balance} credits left
+                </Text>
+                <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(3) }}>
+                  <Pressable
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(enhanceResult.enhanced);
+                      setResultCopied(true);
+                      setTimeout(() => setResultCopied(false), 1500);
+                    }}
+                    style={{
+                      flex: 1,
+                      borderRadius: radius.button,
+                      borderWidth: 1,
+                      borderColor: colors.panelEdge,
+                      paddingVertical: 13,
+                      alignItems: "center",
+                      minHeight: 44,
+                    }}
+                  >
+                    <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                      {resultCopied ? "✓ Copied" : "Copy"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={replaceWithEnhanced}
+                    disabled={replacing}
+                    style={{
+                      flex: 1,
+                      borderRadius: radius.button,
+                      backgroundColor: colors.violet,
+                      paddingVertical: 13,
+                      alignItems: "center",
+                      opacity: replacing ? 0.6 : 1,
+                      minHeight: 44,
+                    }}
+                  >
+                    {replacing ? (
+                      <ActivityIndicator size="small" color={colors.lumen} />
+                    ) : (
+                      <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                        Replace my prompt
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    setEnhanceOpen(false);
+                    setEnhanceResult(null);
+                  }}
+                  style={{ marginTop: spacing(3), alignItems: "center", minHeight: 44, justifyContent: "center" }}
+                >
+                  <Text style={{ color: colors.lumenDim, fontWeight: "700", fontSize: 13 }}>
+                    Keep my original
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Collection picker */}
       <Modal
@@ -520,8 +839,20 @@ export default function PromptDetailScreen() {
             <ScrollView style={{ marginTop: spacing(3), maxHeight: 380 }}>
               {platforms.map((p, i) => (
                 <Pressable
-                  key={p.id || `custom-${i}`}
+                  key={`${p.isCustom ? "c" : "d"}-${p.id ?? i}`}
                   onPress={() => launchTo(p)}
+                  onLongPress={
+                    p.isCustom
+                      ? () => {
+                          setPickerOpen(false);
+                          setEditPlatId(Number(p.id));
+                          setPlatName(p.name);
+                          setPlatUrl(p.url || "");
+                          setPlatError("");
+                          setAddPlatOpen(true);
+                        }
+                      : undefined
+                  }
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
@@ -535,17 +866,174 @@ export default function PromptDetailScreen() {
                       width: 12,
                       height: 12,
                       borderRadius: 6,
-                      backgroundColor: p.color || colors.violet,
+                      backgroundColor: p.isCustom
+                        ? colors.spark
+                        : p.color || colors.violet,
                     }}
                   />
-                  <Text style={{ color: colors.lumen, fontSize: 16, fontWeight: "600" }}>
+                  <Text
+                    style={{ color: colors.lumen, fontSize: 16, fontWeight: "600", flex: 1 }}
+                    numberOfLines={1}
+                  >
                     {p.name}
                   </Text>
+                  {p.isCustom && (
+                    <Text style={{ color: colors.lumenDim + "88", fontSize: 11 }}>
+                      hold to edit
+                    </Text>
+                  )}
                 </Pressable>
               ))}
+              <Pressable
+                onPress={() => {
+                  setPickerOpen(false);
+                  setEditPlatId(null);
+                  setPlatName("");
+                  setPlatUrl("");
+                  setPlatError("");
+                  setAddPlatOpen(true);
+                }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingVertical: 13,
+                  minHeight: 44,
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={16} color={colors.violet} />
+                <Text style={{ color: colors.violet, fontSize: 15, fontWeight: "700" }}>
+                  Add your own platform
+                </Text>
+              </Pressable>
             </ScrollView>
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Add custom platform */}
+      <Modal
+        visible={addPlatOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAddPlatOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.panel,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing(5),
+              paddingBottom: spacing(10),
+            }}
+          >
+            <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+              {editPlatId !== null ? "Edit your platform" : "Add your own platform"}
+            </Text>
+            <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+              {editPlatId !== null
+                ? "Change the name or web address, or remove it from your Launch menu."
+                : "Use an AI that isn't on the list? Add its name and web address and it joins your Launch menu on every prompt."}
+            </Text>
+            <TextInput
+              value={platName}
+              onChangeText={setPlatName}
+              placeholder="Name (e.g. DeepSeek)"
+              placeholderTextColor={colors.lumenDim + "66"}
+              style={{
+                marginTop: spacing(3),
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.panelEdge,
+                backgroundColor: colors.ink,
+                color: colors.lumen,
+                padding: spacing(3),
+                fontSize: 16,
+                minHeight: 44,
+              }}
+            />
+            <TextInput
+              value={platUrl}
+              onChangeText={setPlatUrl}
+              placeholder="Web address (e.g. chat.deepseek.com)"
+              placeholderTextColor={colors.lumenDim + "66"}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              style={{
+                marginTop: spacing(3),
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.panelEdge,
+                backgroundColor: colors.ink,
+                color: colors.lumen,
+                padding: spacing(3),
+                fontSize: 16,
+                minHeight: 44,
+              }}
+            />
+            {platError !== "" && (
+              <Text style={{ color: colors.danger, marginTop: spacing(2), fontSize: 13 }}>
+                {platError}
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(4) }}>
+              <Pressable
+                onPress={() => setAddPlatOpen(false)}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  borderWidth: 1,
+                  borderColor: colors.panelEdge,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  minHeight: 44,
+                }}
+              >
+                <Text style={{ color: colors.lumenDim, fontWeight: "700" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={saveCustomPlatform}
+                disabled={platBusy || !platName.trim() || !platUrl.trim()}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  backgroundColor: colors.violet,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  opacity: platBusy || !platName.trim() || !platUrl.trim() ? 0.6 : 1,
+                  minHeight: 44,
+                }}
+              >
+                {platBusy ? (
+                  <ActivityIndicator size="small" color={colors.lumen} />
+                ) : (
+                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>
+                    {editPlatId !== null ? "Save" : "Add"}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+            {editPlatId !== null && (
+              <Pressable
+                onPress={confirmDeletePlatform}
+                style={{ marginTop: spacing(4), alignItems: "center", minHeight: 44, justifyContent: "center" }}
+              >
+                <Text
+                  style={{
+                    color: colors.danger,
+                    fontWeight: "700",
+                    fontSize: 13,
+                    textDecorationLine: "underline",
+                  }}
+                >
+                  Remove platform
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* Variables fill form */}

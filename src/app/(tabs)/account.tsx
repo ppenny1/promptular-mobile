@@ -30,7 +30,9 @@ import {
   PRO_PRODUCT,
   purchaseProduct,
   restorePurchases,
+  identifyPurchaser,
   PurchasesUnavailableError,
+  PurchaseCancelledError,
 } from "@/lib/purchases";
 
 // Real Apple App ID (ASC listing created Aug 22, 2026). The write-review
@@ -64,6 +66,9 @@ export default function AccountScreen() {
       const res = await api<{ user: AccountUser }>("/api/account");
       setUser(res.user);
       setState("ready");
+      // Tie RevenueCat's customer to this user so purchase events carry
+      // the right id to the webhook. Best-effort, never blocks the UI.
+      identifyPurchaser(res.user.id);
     } catch {
       setUser(null);
       setState("signedout");
@@ -182,9 +187,14 @@ export default function AccountScreen() {
   async function handleBuy(productId: string) {
     try {
       await purchaseProduct(productId);
+      // Credits and Pro land server-side via the RevenueCat webhook; give
+      // it a moment, then refresh the balance.
+      setTimeout(() => load(), 2500);
       load();
     } catch (err) {
-      if (err instanceof PurchasesUnavailableError) {
+      if (err instanceof PurchaseCancelledError) {
+        // User closed the sheet; nothing to say.
+      } else if (err instanceof PurchasesUnavailableError) {
         Alert.alert(
           "Purchases coming soon",
           "Buying isn't switched on in this build yet. It arrives with the App Store release."

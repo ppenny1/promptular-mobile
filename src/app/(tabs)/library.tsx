@@ -11,6 +11,8 @@ import {
   RefreshControl,
   Pressable,
   ScrollView,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,6 +37,37 @@ export default function LibraryScreen() {
   const [filter, setFilter] = useState<Filter>({ type: "all" });
   const [state, setState] = useState<"loading" | "ready" | "signedout" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
+
+  // New prompt modal
+  const [newOpen, setNewOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newText, setNewText] = useState("");
+  const [newBusy, setNewBusy] = useState(false);
+  const [newError, setNewError] = useState("");
+
+  async function createPrompt() {
+    if (!newTitle.trim() || !newText.trim() || newBusy) return;
+    setNewBusy(true);
+    setNewError("");
+    try {
+      await api("/api/prompts", {
+        method: "POST",
+        body: { title: newTitle.trim(), text: newText.trim() },
+      });
+      setNewOpen(false);
+      setNewTitle("");
+      setNewText("");
+      load(q, filter);
+    } catch (err) {
+      if (err instanceof ApiError && err.body?.error === "prompt_limit") {
+        setNewError("Your free library is full (25 prompts). Pro is unlimited.");
+      } else {
+        setNewError("Couldn't save. Please try again.");
+      }
+    } finally {
+      setNewBusy(false);
+    }
+  }
 
   async function toggleFavorite(item: PromptRow) {
     const next = item.favorite ? 0 : 1;
@@ -99,9 +132,41 @@ export default function LibraryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.ink, paddingTop: spacing(16) }}>
       <View style={{ paddingHorizontal: spacing(5) }}>
-        <Text style={{ color: colors.lumen, fontSize: 28, fontWeight: "800" }}>
-          Library
-        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={{ color: colors.lumen, fontSize: 28, fontWeight: "800" }}>
+            Library
+          </Text>
+          {state === "ready" && (
+            <Pressable
+              onPress={() => {
+                setNewError("");
+                setNewOpen(true);
+              }}
+              hitSlop={8}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                backgroundColor: colors.violet,
+                borderRadius: radius.button,
+                paddingHorizontal: 14,
+                minHeight: 38,
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="add" size={16} color={colors.lumen} />
+              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                New
+              </Text>
+            </Pressable>
+          )}
+        </View>
         <TextInput
           value={q}
           onChangeText={(t) => {
@@ -236,6 +301,110 @@ export default function LibraryScreen() {
           </Pressable>
         )}
       />
+
+      {/* New prompt */}
+      <Modal
+        visible={newOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setNewOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.panel,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing(5),
+              paddingBottom: spacing(10),
+            }}
+          >
+            <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+              New prompt
+            </Text>
+            <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: 4 }}>
+              Save any prompt you already use. Add {"{{blanks}}"} for parts you
+              fill in each time.
+            </Text>
+            <TextInput
+              value={newTitle}
+              onChangeText={setNewTitle}
+              placeholder="Title..."
+              placeholderTextColor={colors.lumenDim + "66"}
+              style={{
+                marginTop: spacing(3),
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.panelEdge,
+                backgroundColor: colors.ink,
+                color: colors.lumen,
+                padding: spacing(3),
+                fontSize: 16,
+                minHeight: 44,
+              }}
+            />
+            <TextInput
+              value={newText}
+              onChangeText={setNewText}
+              multiline
+              placeholder="Your prompt..."
+              placeholderTextColor={colors.lumenDim + "66"}
+              style={{
+                marginTop: spacing(3),
+                minHeight: 140,
+                borderRadius: radius.input,
+                borderWidth: 1,
+                borderColor: colors.panelEdge,
+                backgroundColor: colors.ink,
+                color: colors.lumen,
+                padding: spacing(3),
+                fontSize: 16,
+                textAlignVertical: "top",
+              }}
+            />
+            {newError !== "" && (
+              <Text style={{ color: colors.danger, marginTop: spacing(2), fontSize: 13 }}>
+                {newError}
+              </Text>
+            )}
+            <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(4) }}>
+              <Pressable
+                onPress={() => setNewOpen(false)}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  borderWidth: 1,
+                  borderColor: colors.panelEdge,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  minHeight: 44,
+                }}
+              >
+                <Text style={{ color: colors.lumenDim, fontWeight: "700" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={createPrompt}
+                disabled={newBusy || !newTitle.trim() || !newText.trim()}
+                style={{
+                  flex: 1,
+                  borderRadius: radius.button,
+                  backgroundColor: colors.violet,
+                  paddingVertical: 13,
+                  alignItems: "center",
+                  opacity: newBusy || !newTitle.trim() || !newText.trim() ? 0.6 : 1,
+                  minHeight: 44,
+                }}
+              >
+                {newBusy ? (
+                  <ActivityIndicator size="small" color={colors.lumen} />
+                ) : (
+                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>Save</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

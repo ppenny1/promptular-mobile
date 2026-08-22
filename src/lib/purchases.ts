@@ -1,15 +1,25 @@
-// Purchases layer. RevenueCat is not wired in yet (project + products come
-// in the paywall step), so this stub degrades to honest "purchases
-// unavailable" behavior per the standard: never a crash, never a fake
-// purchase. When react-native-purchases lands, this file becomes the only
-// place that changes: configure with the per-platform public key
-// (appl_/goog_ via Platform.OS), map PACKS to offerings, and implement
-// purchase/restore for real.
+// Purchases layer, now backed by RevenueCat (react-native-purchases).
+// The public SDK key is per store: appl_ for iOS, goog_ for Android
+// (empty until the Play side exists; an empty key degrades to honest
+// "purchases unavailable" behavior, never a crash, so Android code can
+// ship before the Play app does).
+//
+// Credits and Pro are granted SERVER-SIDE by the RevenueCat webhook
+// (/api/revenuecat); the app never grants anything locally. After a
+// purchase the caller reloads /api/account to show the new balance.
 
-export const PURCHASES_AVAILABLE = false;
+import { Platform } from "react-native";
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
-// Display ladder (locked Aug 21, 2026). Real prices come from the store at
-// purchase time once RevenueCat is live; these labels are marketing copy.
+const IOS_API_KEY = "appl_HzxWGqMNgFLhCQhmtGUqbhWidwp";
+const ANDROID_API_KEY = ""; // goog_ key lands with the Play Store release
+
+const API_KEY = Platform.OS === "ios" ? IOS_API_KEY : ANDROID_API_KEY;
+
+export const PURCHASES_AVAILABLE = API_KEY.length > 0;
+
+// Display ladder (locked Aug 21, 2026). Store prices are the source of
+// truth at purchase time; these labels are marketing copy.
 export const CREDIT_PACKS = [
   { id: "com.decalvenue.promptular.credits.50", credits: 50, price: "$4.99" },
   { id: "com.decalvenue.promptular.credits.100", credits: 100, price: "$8.99", tag: "Popular" },
@@ -28,10 +38,53 @@ export class PurchasesUnavailableError extends Error {
   }
 }
 
-export async function purchaseProduct(_productId: string): Promise<never> {
-  throw new PurchasesUnavailableError();
+export class PurchaseCancelledError extends Error {
+  constructor() {
+    super("Purchase cancelled.");
+  }
 }
 
-export async function restorePurchases(): Promise<never> {
-  throw new PurchasesUnavailableError();
+let configured = false;
+
+function ensureConfigured() {
+  if (!PURCHASES_AVAILABLE) throw new PurchasesUnavailableError();
+  if (!configured) {
+    Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR);
+    Purchases.configure({ apiKey: API_KEY });
+    configured = true;
+  }
+}
+
+// Ties RevenueCat's customer to our numeric user id so webhook events carry
+// it (the webhook also resolves aliases for safety). Call after sign-in and
+// whenever the Account screen loads with a signed-in user.
+export async function identifyPurchaser(userId: number): Promise<void> {
+  try {
+    ensureConfigured();
+    await Purchases.logIn(String(userId));
+  } catch {
+    // Identification is best-effort; the webhook's alias resolution covers
+    // the anonymous-first case.
+  }
+}
+
+export async function purchaseProduct(productId: string): Promise<void> {
+  ensureConfigured();
+  const products = await Purchases.getProducts([productId]);
+  const product = products.find((p) => p.identifier === productId) || products[0];
+  if (!product) {
+    throw new Error("That product isn't available right now.");
+  }
+  try {
+    await Purchases.purchaseStoreProduct(product);
+  } catch (err) {
+    const e = err as { userCancelled?: boolean };
+    if (e.userCancelled) throw new PurchaseCancelledError();
+    throw err;
+  }
+}
+
+export async function restorePurchases(): Promise<void> {
+  ensureConfigured();
+  await Purchases.restorePurchases();
 }
