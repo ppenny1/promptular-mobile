@@ -25,6 +25,10 @@ export default function RootLayout() {
           name="collection/[id]"
           options={{ contentStyle: { backgroundColor: colors.ink } }}
         />
+        <Stack.Screen
+          name="help"
+          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+        />
       </Stack>
     </>
   );

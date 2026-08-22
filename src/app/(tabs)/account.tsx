@@ -17,7 +17,7 @@ import {
   Linking,
   ActivityIndicator,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Ionicons } from "@expo/vector-icons";
@@ -50,6 +50,7 @@ interface AccountUser {
 }
 
 export default function AccountScreen() {
+  const router = useRouter();
   const [user, setUser] = useState<AccountUser | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "signedout">("loading");
   const [busy, setBusy] = useState(false);
@@ -520,10 +521,7 @@ export default function AccountScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
             </Pressable>
             <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
-            <Pressable
-              onPress={() => Linking.openURL("https://www.promptular.app/help").catch(() => {})}
-              style={row}
-            >
+            <Pressable onPress={() => router.push("/help")} style={row}>
               <Ionicons name="help-circle-outline" size={18} color={colors.lumenDim} />
               <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
                 Help
