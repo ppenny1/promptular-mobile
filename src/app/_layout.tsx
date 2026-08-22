@@ -21,6 +21,10 @@ export default function RootLayout() {
           name="history"
           options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
         />
+        <Stack.Screen
+          name="collection/[id]"
+          options={{ contentStyle: { backgroundColor: colors.ink } }}
+        />
       </Stack>
     </>
   );

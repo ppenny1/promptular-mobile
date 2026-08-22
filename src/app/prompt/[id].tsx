@@ -26,7 +26,14 @@ interface PromptData {
   tags: string | null;
   favorite: number;
   times_used: number;
+  collection_id: number | null;
   share_slug: string | null;
+}
+
+interface CollectionRow {
+  id: number;
+  name: string;
+  prompt_count: number;
 }
 
 interface PlatformDef {
@@ -60,6 +67,10 @@ export default function PromptDetailScreen() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Collection picker state
+  const [collections, setCollections] = useState<CollectionRow[]>([]);
+  const [colPickerOpen, setColPickerOpen] = useState(false);
+
   // Launch flow state
   const [platforms, setPlatforms] = useState<PlatformDef[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -76,6 +87,10 @@ export default function PromptDetailScreen() {
     try {
       const res = await api<{ prompt: PromptData }>(`/api/prompts/${id}`);
       setPrompt(res.prompt);
+      // Collections load alongside so the chip can show the real name.
+      api<{ collections: CollectionRow[] }>("/api/collections")
+        .then((c) => setCollections(c.collections))
+        .catch(() => {});
     } catch {
       router.back();
     }
@@ -86,6 +101,35 @@ export default function PromptDetailScreen() {
       load();
     }, [load])
   );
+
+  async function openCollectionPicker() {
+    if (collections.length === 0) {
+      try {
+        const res = await api<{ collections: CollectionRow[] }>("/api/collections");
+        setCollections(res.collections);
+      } catch {
+        Alert.alert("Couldn't load collections", "Check your connection.");
+        return;
+      }
+    }
+    setColPickerOpen(true);
+  }
+
+  async function moveToCollection(collectionId: number | null) {
+    if (!prompt) return;
+    setColPickerOpen(false);
+    const prev = prompt.collection_id;
+    setPrompt({ ...prompt, collection_id: collectionId });
+    try {
+      await api(`/api/prompts/${prompt.id}`, {
+        method: "PUT",
+        body: { collectionId },
+      });
+    } catch {
+      setPrompt((p) => (p ? { ...p, collection_id: prev } : p));
+      Alert.alert("Couldn't move", "Please try again.");
+    }
+  }
 
   async function toggleFavorite() {
     if (!prompt) return;
@@ -326,6 +370,28 @@ export default function PromptDetailScreen() {
             {variables.length > 0 ? ` · ${variables.length} fill-in ${variables.length === 1 ? "variable" : "variables"}` : ""}
           </Text>
 
+          <Pressable
+            onPress={openCollectionPicker}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              alignSelf: "flex-start",
+              marginTop: spacing(2),
+              paddingHorizontal: 12,
+              borderRadius: radius.button,
+              backgroundColor: colors.panel,
+              minHeight: 38,
+            }}
+          >
+            <Ionicons name="folder-outline" size={14} color={colors.lumenDim} />
+            <Text style={{ color: colors.lumenDim, fontWeight: "700", fontSize: 13 }}>
+              {collections.find((c) => c.id === prompt.collection_id)?.name ||
+                (prompt.collection_id ? "Collection" : "Add to collection")}
+            </Text>
+            <Ionicons name="chevron-down" size={13} color={colors.lumenDim} />
+          </Pressable>
+
           <View
             style={{
               marginTop: spacing(4),
@@ -376,6 +442,70 @@ export default function PromptDetailScreen() {
           </Pressable>
         </>
       )}
+
+      {/* Collection picker */}
+      <Modal
+        visible={colPickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setColPickerOpen(false)}
+      >
+        <Pressable style={{ flex: 1, backgroundColor: "#00000099" }} onPress={() => setColPickerOpen(false)}>
+          <View
+            style={{
+              marginTop: "auto",
+              backgroundColor: colors.panel,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: spacing(5),
+              paddingBottom: spacing(10),
+            }}
+          >
+            <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+              Move to collection
+            </Text>
+            {collections.length === 0 && (
+              <Text style={{ color: colors.lumenDim, fontSize: 13, marginTop: spacing(2) }}>
+                No collections yet. Create one from the Library tab with the New chip.
+              </Text>
+            )}
+            <ScrollView style={{ marginTop: spacing(2), maxHeight: 380 }}>
+              <Pressable
+                onPress={() => moveToCollection(null)}
+                style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, minHeight: 44 }}
+              >
+                <Ionicons
+                  name={prompt.collection_id === null ? "radio-button-on" : "radio-button-off"}
+                  size={18}
+                  color={prompt.collection_id === null ? colors.violet : colors.lumenDim}
+                />
+                <Text style={{ color: colors.lumen, fontSize: 16, fontWeight: "600" }}>
+                  No collection
+                </Text>
+              </Pressable>
+              {collections.map((c) => (
+                <Pressable
+                  key={c.id}
+                  onPress={() => moveToCollection(c.id)}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13, minHeight: 44 }}
+                >
+                  <Ionicons
+                    name={prompt.collection_id === c.id ? "radio-button-on" : "radio-button-off"}
+                    size={18}
+                    color={prompt.collection_id === c.id ? colors.violet : colors.lumenDim}
+                  />
+                  <Text style={{ color: colors.lumen, fontSize: 16, fontWeight: "600" }}>
+                    {c.name}
+                  </Text>
+                  <Text style={{ color: colors.lumenDim, fontSize: 13 }}>
+                    {c.prompt_count}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Platform picker */}
       <Modal visible={pickerOpen} transparent animationType="slide" onRequestClose={() => setPickerOpen(false)}>

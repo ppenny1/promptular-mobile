@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/lib/theme";
 
 // Bottom tabs are the app's primary navigation per the standard:
-// Enhance (the identity of the app, first) | Library | Account.
+// Enhance (the identity of the app, first) | Library | Collections | Account.
 export default function TabLayout() {
   return (
     <Tabs
@@ -33,6 +33,15 @@ export default function TabLayout() {
           title: "Library",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="albums" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="collections"
+        options={{
+          title: "Collections",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="folder" size={size} color={color} />
           ),
         }}
       />

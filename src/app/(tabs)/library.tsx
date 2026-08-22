@@ -1,8 +1,17 @@
-// The Library tab: v0 skeleton. Lists prompts from /api/prompts with search;
-// detail, variables, and collections come next.
+// The Library tab: prompts with search and a simple three-chip bar:
+// All Prompts, Favorites, and All Collections (which jumps to the
+// Collections tab, where everything collection-related lives).
 
 import { useCallback, useState } from "react";
-import { View, Text, TextInput, FlatList, RefreshControl, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  RefreshControl,
+  Pressable,
+  ScrollView,
+} from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -17,10 +26,13 @@ interface PromptRow {
   updated_at: string;
 }
 
+type Filter = { type: "all" } | { type: "fav" };
+
 export default function LibraryScreen() {
   const router = useRouter();
   const [prompts, setPrompts] = useState<PromptRow[]>([]);
   const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<Filter>({ type: "all" });
   const [state, setState] = useState<"loading" | "ready" | "signedout" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,10 +53,13 @@ export default function LibraryScreen() {
     }
   }
 
-  const load = useCallback(async (query: string) => {
+  const load = useCallback(async (query: string, f: Filter) => {
     try {
+      const params = new URLSearchParams();
+      if (query) params.set("q", query);
+      if (f.type === "fav") params.set("favorite", "1");
       const res = await api<{ prompts: PromptRow[] }>(
-        `/api/prompts?q=${encodeURIComponent(query)}`
+        `/api/prompts?${params.toString()}`
       );
       setPrompts(res.prompts);
       setState("ready");
@@ -55,10 +70,31 @@ export default function LibraryScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      load(q);
+      load(q, filter);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [load])
   );
+
+  function setAndLoad(f: Filter) {
+    setFilter(f);
+    load(q, f);
+  }
+
+  const chipStyle = (active: boolean) => ({
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    paddingHorizontal: 14,
+    borderRadius: radius.button,
+    backgroundColor: active ? colors.violet : colors.panel,
+    minHeight: 38,
+    justifyContent: "center" as const,
+  });
+  const chipText = (active: boolean) => ({
+    color: active ? colors.lumen : colors.lumenDim,
+    fontWeight: "700" as const,
+    fontSize: 13,
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ink, paddingTop: spacing(16) }}>
@@ -70,7 +106,7 @@ export default function LibraryScreen() {
           value={q}
           onChangeText={(t) => {
             setQ(t);
-            load(t);
+            load(t, filter);
           }}
           placeholder="Search your prompts..."
           placeholderTextColor={colors.lumenDim + "88"}
@@ -89,6 +125,31 @@ export default function LibraryScreen() {
         />
       </View>
 
+      {state !== "signedout" && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: spacing(3), flexGrow: 0 }}
+          contentContainerStyle={{ paddingHorizontal: spacing(5), gap: 8 }}
+        >
+          <Pressable onPress={() => setAndLoad({ type: "all" })} style={chipStyle(filter.type === "all")}>
+            <Text style={chipText(filter.type === "all")}>All Prompts</Text>
+          </Pressable>
+          <Pressable onPress={() => setAndLoad({ type: "fav" })} style={chipStyle(filter.type === "fav")}>
+            <Ionicons
+              name="heart"
+              size={13}
+              color={filter.type === "fav" ? colors.lumen : colors.heart}
+            />
+            <Text style={chipText(filter.type === "fav")}>Favorites</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push("/collections")} style={chipStyle(false)}>
+            <Ionicons name="folder-outline" size={13} color={colors.lumenDim} />
+            <Text style={chipText(false)}>Collections</Text>
+          </Pressable>
+        </ScrollView>
+      )}
+
       {state === "signedout" && (
         <Text style={{ color: colors.lumenDim, padding: spacing(5), fontSize: 15 }}>
           Sign in on the Account tab to see your library.
@@ -101,7 +162,9 @@ export default function LibraryScreen() {
       )}
       {state === "ready" && prompts.length === 0 && (
         <Text style={{ color: colors.lumenDim, padding: spacing(5), fontSize: 15 }}>
-          No prompts yet. Enhance something and save it, and it lands here.
+          {filter.type === "all" && !q
+            ? "No prompts yet. Enhance something and save it, and it lands here."
+            : "Nothing matches this view yet."}
         </Text>
       )}
 
@@ -115,7 +178,7 @@ export default function LibraryScreen() {
             tintColor={colors.lumenDim}
             onRefresh={async () => {
               setRefreshing(true);
-              await load(q);
+              await load(q, filter);
               setRefreshing(false);
             }}
           />
