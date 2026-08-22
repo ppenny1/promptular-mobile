@@ -1,7 +1,8 @@
 // The Enhance tab: the identity of the app. v0 skeleton with the real
 // layout and a live call to /api/enhance once signed in.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import {
   View,
   Text,
@@ -34,7 +35,19 @@ interface EnhanceResponse {
 
 export default function EnhanceScreen() {
   const router = useRouter();
+  const { shared } = useLocalSearchParams<{ shared?: string }>();
   const [prompt, setPrompt] = useState("");
+
+  // Text shared into the app (share extension / share target) prefills the
+  // prompt box, ready to enhance.
+  useEffect(() => {
+    if (typeof shared === "string" && shared.trim()) {
+      setPrompt(shared.trim().slice(0, 4000));
+      setResult(null);
+      setError("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shared]);
   const [mode, setMode] = useState<string>("general");
   const [strength, setStrength] = useState<"light" | "full">("light");
   const [loading, setLoading] = useState(false);
