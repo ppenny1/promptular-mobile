@@ -2,8 +2,9 @@
 // detail, variables, and collections come next.
 
 import { useCallback, useState } from "react";
-import { View, Text, TextInput, FlatList, RefreshControl } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { View, Text, TextInput, FlatList, RefreshControl, Pressable } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 
@@ -17,10 +18,28 @@ interface PromptRow {
 }
 
 export default function LibraryScreen() {
+  const router = useRouter();
   const [prompts, setPrompts] = useState<PromptRow[]>([]);
   const [q, setQ] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "signedout" | "error">("loading");
   const [refreshing, setRefreshing] = useState(false);
+
+  async function toggleFavorite(item: PromptRow) {
+    const next = item.favorite ? 0 : 1;
+    setPrompts((prev) =>
+      prev.map((p) => (p.id === item.id ? { ...p, favorite: next } : p))
+    );
+    try {
+      await api(`/api/prompts/${item.id}`, {
+        method: "PUT",
+        body: { favorite: next === 1 },
+      });
+    } catch {
+      setPrompts((prev) =>
+        prev.map((p) => (p.id === item.id ? { ...p, favorite: item.favorite } : p))
+      );
+    }
+  }
 
   const load = useCallback(async (query: string) => {
     try {
@@ -102,32 +121,56 @@ export default function LibraryScreen() {
           />
         }
         renderItem={({ item }) => (
-          <View
+          <Pressable
+            onPress={() => router.push(`/prompt/${item.id}`)}
             style={{
               borderRadius: radius.card,
               backgroundColor: colors.panel,
               padding: spacing(4),
+              flexDirection: "row",
+              alignItems: "center",
+              gap: spacing(3),
             }}
           >
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                <Text
+                  style={{ color: colors.lumen, fontWeight: "700", fontSize: 15, flex: 1 }}
+                  numberOfLines={1}
+                >
+                  {item.title}
+                </Text>
+                <Text style={{ color: colors.lumenDim, fontSize: 11 }}>
+                  used {item.times_used}x
+                </Text>
+              </View>
               <Text
-                style={{ color: colors.lumen, fontWeight: "700", fontSize: 15, flex: 1 }}
-                numberOfLines={1}
+                style={{ color: colors.lumenDim, marginTop: 6, fontSize: 13, lineHeight: 19 }}
+                numberOfLines={3}
               >
-                {item.favorite ? "❤️ " : ""}
-                {item.title}
-              </Text>
-              <Text style={{ color: colors.lumenDim, fontSize: 11 }}>
-                used {item.times_used}x
+                {item.text}
               </Text>
             </View>
-            <Text
-              style={{ color: colors.lumenDim, marginTop: 6, fontSize: 13, lineHeight: 19 }}
-              numberOfLines={3}
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                toggleFavorite(item);
+              }}
+              hitSlop={10}
+              style={{
+                width: 44,
+                height: 44,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              {item.text}
-            </Text>
-          </View>
+              <Ionicons
+                name={item.favorite ? "heart" : "heart-outline"}
+                size={22}
+                color={item.favorite ? colors.danger : colors.lumenDim}
+              />
+            </Pressable>
+          </Pressable>
         )}
       />
     </View>

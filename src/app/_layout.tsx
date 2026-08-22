@@ -13,6 +13,10 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="prompt/[id]"
+          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+        />
       </Stack>
     </>
   );
