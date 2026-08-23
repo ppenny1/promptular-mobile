@@ -351,14 +351,29 @@ export default function AccountScreen() {
     if (row.some((c) => c.trim() !== "")) rows.push(row);
     if (rows.length < 2) return [];
     const header = rows[0].map((h) => h.trim().toLowerCase());
-    const idx = (name: string) => header.indexOf(name);
-    return rows.slice(1).map((r) => ({
-      title: r[idx("title")] ?? "",
-      text: r[idx("text")] ?? "",
-      tags: idx("tags") >= 0 ? r[idx("tags")] : undefined,
-      collection: idx("collection") >= 0 ? r[idx("collection")] : undefined,
-      favorite: idx("favorite") >= 0 ? r[idx("favorite")] === "1" || r[idx("favorite")]?.toLowerCase() === "true" : undefined,
-    }));
+    // Aliases cover the classic Promptular web export (Content, Category,
+    // Favorite as Yes/No) alongside our own column names.
+    const idx = (...names: string[]) => {
+      for (const n of names) {
+        const i = header.indexOf(n);
+        if (i >= 0) return i;
+      }
+      return -1;
+    };
+    const col = (r: string[], ...names: string[]) => {
+      const i = idx(...names);
+      return i >= 0 ? r[i] : undefined;
+    };
+    return rows.slice(1).map((r) => {
+      const fav = (col(r, "favorite") ?? "").toLowerCase();
+      return {
+        title: col(r, "title", "name") ?? "",
+        text: col(r, "text", "content", "prompt") ?? "",
+        tags: col(r, "tags"),
+        collection: col(r, "collection", "category", "folder"),
+        favorite: idx("favorite") >= 0 ? fav === "1" || fav === "true" || fav === "yes" : undefined,
+      };
+    });
   }
 
   async function pickImportFile() {

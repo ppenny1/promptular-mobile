@@ -72,16 +72,26 @@ src/lib/purchases.ts, iOS key appl_HzxWGqMNgFLhCQhmtGUqbhWidwp, Restore,
 Redeem code, Leave a Review deep link id6804114635, red Delete Account
 flow), review prompts (expo-store-review at 3rd/15th/40th enhance).
 
-ASC: app id 6804114635 with all 5 IAP products created (Prepare for
-Submission). RevenueCat project proj197fef68 fully configured.
+Also shipped: share extension (expo-share-intent + +native-intent.tsx
+redirect, dismissible discoverability hint on Enhance), broadcast banner
+polling + status-bar mask, ErrorNotice (friendly errors, Report this
+issue, in-app contact form), keyboard-avoiding bottom sheets everywhere,
+Account version line, legacy-CSV import aliases in the CSV parser
+(content/category/favorite Yes-No; in repo, ships with 1.0.1).
+
+## SUBMITTED (Aug 23, 2026)
+
+Version 1.0 build 2 + all 5 IAPs submitted to App Review, Manual release.
+Real-device TestFlight verified: Apple Sign In, production API
+(www.promptular.app flipped live), sandbox credit + Pro purchases with
+webhook auto-crediting, Restore, share extension. EAS project under
+decal-venue-inc; shared dist cert; app group group.com.decalvenue.promptular.
 
 ## Still to build
 
-Share extension (iOS) + share target (Android), banner polling, TestFlight
-prep (IAP review screenshots from the paywall, seed review data, review
-notes, EAS build). Sandbox purchase verification needs the webhook to
-reach the new backend (www still serves the legacy site until the domain
-flips). Android: everything Play-side, plus the goog_ key in purchases.ts.
+Android: everything Play-side, plus the goog_ key in purchases.ts.
+Post-approval: press Release on launch day; launch checklist lives in
+claude/promptular-progress.md in the Claude project.
 
 Git: dev = working branch, main = release. Same workflow as all repos.
 The full spec lives in the Promptular Claude project instructions; current
