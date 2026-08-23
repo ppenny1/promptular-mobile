@@ -12,7 +12,7 @@ import { Platform } from "react-native";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
 
 const IOS_API_KEY = "appl_HzxWGqMNgFLhCQhmtGUqbhWidwp";
-const ANDROID_API_KEY = ""; // goog_ key lands with the Play Store release
+const ANDROID_API_KEY = "goog_rUiOvKWUpkUbvmzpdgJuoxorLjr";
 
 const API_KEY = Platform.OS === "ios" ? IOS_API_KEY : ANDROID_API_KEY;
 

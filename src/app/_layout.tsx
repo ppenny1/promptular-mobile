@@ -1,13 +1,22 @@
 import { useEffect } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View } from "react-native";
+import { Platform, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShareIntent } from "expo-share-intent";
 import { colors } from "@/lib/theme";
 import Banner from "@/components/Banner";
 
 export default function RootLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  // iOS modals present as sheets below the status bar; Android modals are
+  // full screen and slide under it, hiding each screen's header row. Pad
+  // the top inset on Android only.
+  const modalStyle = {
+    backgroundColor: colors.ink,
+    paddingTop: Platform.OS === "android" ? insets.top : 0,
+  };
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
 
   // Text shared to Promptular from any app lands in Enhance, ready to
@@ -35,11 +44,11 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="prompt/[id]"
-          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+          options={{ presentation: "modal", contentStyle: modalStyle }}
         />
         <Stack.Screen
           name="history"
-          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+          options={{ presentation: "modal", contentStyle: modalStyle }}
         />
         <Stack.Screen
           name="collection/[id]"
@@ -47,11 +56,11 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="help"
-          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+          options={{ presentation: "modal", contentStyle: modalStyle }}
         />
         <Stack.Screen
           name="templates"
-          options={{ presentation: "modal", contentStyle: { backgroundColor: colors.ink } }}
+          options={{ presentation: "modal", contentStyle: modalStyle }}
         />
       </Stack>
     </View>

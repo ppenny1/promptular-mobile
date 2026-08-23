@@ -213,7 +213,7 @@ export default function AccountScreen() {
       } else if (err instanceof PurchasesUnavailableError) {
         Alert.alert(
           "Purchases coming soon",
-          "Buying isn't switched on in this build yet. It arrives with the App Store release."
+          "Buying isn't switched on in this build yet. It arrives with the store release."
         );
       } else {
         Alert.alert("Purchase didn't finish", "You weren't charged. Please try again.");
@@ -230,7 +230,7 @@ export default function AccountScreen() {
       if (err instanceof PurchasesUnavailableError) {
         Alert.alert(
           "Purchases coming soon",
-          "Restore works once purchases are switched on in the App Store release."
+          "Restore works once purchases are switched on in the store release."
         );
       } else {
         Alert.alert("Couldn't restore", "Please try again.");

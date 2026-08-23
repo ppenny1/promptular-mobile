@@ -10,6 +10,7 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -401,9 +402,9 @@ export default function EnhanceScreen() {
         >
           <Ionicons name="share-outline" size={16} color={colors.violet} />
           <Text style={{ color: colors.lumenDim, fontSize: 13, lineHeight: 19, flex: 1 }}>
-            See text worth enhancing in Safari, Notes, or any other app?
-            Highlight it, tap Share, and choose Promptular. It lands right
-            here, ready to enhance.
+            See text worth enhancing in {Platform.OS === "ios" ? "Safari, Notes," : "Chrome, Gmail,"} or any
+            other app? Highlight it, tap Share, and choose Promptular. It
+            lands right here, ready to enhance.
           </Text>
           <Pressable onPress={dismissShareHint} hitSlop={10}>
             <Ionicons name="close" size={16} color={colors.lumenDim} />
