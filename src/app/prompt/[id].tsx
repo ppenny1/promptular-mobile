@@ -13,6 +13,8 @@ import {
   Linking,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -658,7 +660,10 @@ export default function PromptDetailScreen() {
         animationType="slide"
         onRequestClose={() => !enhancing && setEnhanceOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View
             style={{
               backgroundColor: colors.panel,
@@ -751,7 +756,7 @@ export default function PromptDetailScreen() {
                   </Text>
                 </ScrollView>
                 <Text style={{ color: colors.lumenDim, fontSize: 12, marginTop: spacing(2) }}>
-                  {enhanceResult.balance} credits left
+                  {enhanceResult.balance} {enhanceResult.balance === 1 ? "credit" : "credits"} left
                 </Text>
                 <View style={{ flexDirection: "row", gap: spacing(3), marginTop: spacing(3) }}>
                   <Pressable
@@ -810,7 +815,7 @@ export default function PromptDetailScreen() {
               </>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Collection picker */}
@@ -969,7 +974,10 @@ export default function PromptDetailScreen() {
         animationType="slide"
         onRequestClose={() => setAddPlatOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View
             style={{
               backgroundColor: colors.panel,
@@ -1084,12 +1092,15 @@ export default function PromptDetailScreen() {
               </Pressable>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Variables fill form */}
       <Modal visible={varsOpen} transparent animationType="slide" onRequestClose={() => setVarsOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View style={{ backgroundColor: colors.panel, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing(5), paddingBottom: spacing(10) }}>
             <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
               Fill in the blanks
@@ -1137,7 +1148,7 @@ export default function PromptDetailScreen() {
               </Text>
             </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );

@@ -16,6 +16,7 @@ import {
   Modal,
   Linking,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Share } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -754,7 +755,10 @@ export default function AccountScreen() {
         animationType="slide"
         onRequestClose={() => setImportOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View
             style={{
               backgroundColor: colors.panel,
@@ -864,7 +868,7 @@ export default function AccountScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Promo code */}
@@ -874,7 +878,10 @@ export default function AccountScreen() {
         animationType="slide"
         onRequestClose={() => setPromoOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View
             style={{
               backgroundColor: colors.panel,
@@ -959,7 +966,7 @@ export default function AccountScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );

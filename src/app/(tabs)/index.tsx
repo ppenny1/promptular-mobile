@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radius, spacing } from "@/lib/theme";
@@ -57,6 +58,8 @@ const DEFAULT_TIPS: ModeTip[] = [
   },
 ];
 
+const SHARE_HINT_KEY = "promptular.shareHintDismissed";
+
 interface EnhanceResponse {
   ok: boolean;
   enhanceId: number;
@@ -90,6 +93,20 @@ export default function EnhanceScreen() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tips, setTips] = useState<ModeTip[]>(DEFAULT_TIPS);
+  const [shareHintVisible, setShareHintVisible] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SHARE_HINT_KEY)
+      .then((v) => {
+        if (!v) setShareHintVisible(true);
+      })
+      .catch(() => {});
+  }, []);
+
+  function dismissShareHint() {
+    setShareHintVisible(false);
+    AsyncStorage.setItem(SHARE_HINT_KEY, "1").catch(() => {});
+  }
 
   useEffect(() => {
     api<{ modes: ModeTip[] }>("/api/modes", { auth: false })
@@ -366,6 +383,34 @@ export default function EnhanceScreen() {
         </View>
       )}
 
+      {/* One-time discoverability hint for the share extension. Dismissal
+          persists in AsyncStorage so it never nags. */}
+      {!result && !loading && shareHintVisible && (
+        <View
+          style={{
+            marginTop: spacing(3),
+            borderRadius: radius.card,
+            borderWidth: 1,
+            borderColor: colors.panelEdge,
+            backgroundColor: colors.panel,
+            padding: spacing(4),
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 8,
+          }}
+        >
+          <Ionicons name="share-outline" size={16} color={colors.violet} />
+          <Text style={{ color: colors.lumenDim, fontSize: 13, lineHeight: 19, flex: 1 }}>
+            See text worth enhancing in Safari, Notes, or any other app?
+            Highlight it, tap Share, and choose Promptular. It lands right
+            here, ready to enhance.
+          </Text>
+          <Pressable onPress={dismissShareHint} hitSlop={10}>
+            <Ionicons name="close" size={16} color={colors.lumenDim} />
+          </Pressable>
+        </View>
+      )}
+
       {result && (
         <View
           style={{
@@ -388,7 +433,7 @@ export default function EnhanceScreen() {
           </Text>
           <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: spacing(3), alignItems: "center" }}>
             <Text style={{ color: colors.lumenDim, fontSize: 12 }}>
-              {result.balance} credits left
+              {result.balance} {result.balance === 1 ? "credit" : "credits"} left
             </Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Pressable

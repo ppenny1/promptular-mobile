@@ -97,7 +97,16 @@ export default function TemplatesScreen() {
           paddingBottom: spacing(2),
         }}
       >
-        <Text style={{ color: colors.lumen, fontSize: 22, fontWeight: "800" }}>
+        <Text
+          style={{
+            color: colors.lumen,
+            fontSize: 22,
+            fontWeight: "800",
+            flex: 1,
+            marginRight: spacing(3),
+          }}
+          numberOfLines={2}
+        >
           {selected ? selected.title : "Templates"}
         </Text>
         <Pressable
@@ -241,12 +250,23 @@ export default function TemplatesScreen() {
                 {selected.prompt}
               </Text>
             </View>
-            {error !== "" && (
-              <Text style={{ color: colors.danger, marginTop: spacing(3), fontSize: 13 }}>
-                {error}
-              </Text>
-            )}
           </ScrollView>
+          {/* Error lives in the fixed footer so it is always visible, even
+              when the prompt text scrolls (the old in-scroll placement hid
+              the library-full message below the fold). */}
+          {error !== "" && (
+            <Text
+              style={{
+                color: colors.danger,
+                fontSize: 13,
+                lineHeight: 19,
+                paddingHorizontal: spacing(5),
+                paddingTop: spacing(3),
+              }}
+            >
+              {error}
+            </Text>
+          )}
           <View
             style={{
               flexDirection: "row",

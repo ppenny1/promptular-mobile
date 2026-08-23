@@ -13,6 +13,8 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -247,7 +249,10 @@ export default function CollectionsScreen() {
         animationType="slide"
         onRequestClose={() => setModalOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View
             style={{
               backgroundColor: colors.panel,
@@ -338,7 +343,7 @@ export default function CollectionsScreen() {
               </Pressable>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

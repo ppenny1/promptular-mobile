@@ -13,6 +13,7 @@ import {
   Modal,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
@@ -152,7 +153,10 @@ export default function ErrorNotice({
         animationType="slide"
         onRequestClose={() => setFormOpen(false)}
       >
-        <View style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
+        >
           <View
             style={{
               backgroundColor: colors.panel,
@@ -239,7 +243,7 @@ export default function ErrorNotice({
               )}
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
