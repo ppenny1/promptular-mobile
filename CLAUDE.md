@@ -89,8 +89,13 @@ decal-venue-inc; shared dist cert; app group group.com.decalvenue.promptular.
 
 ## Still to build
 
-Android: everything Play-side, plus the goog_ key in purchases.ts.
-Post-approval: press Release on launch day; launch checklist lives in
+Nothing. BOTH stores in review (Aug 24): iOS Manual release, Android
+managed publishing ON, so both park on approval for one coordinated
+launch day. Android: goog_ key wired, all 5 Play products active, all 5
+OAuth clients registered (Play signing key SHA-1 pulled from the real
+APK; note apksigner chokes on Play's PQC signature block, parse the APK
+Signing Block v2 in Python instead). Open: Android purchase test retry
+(new-product propagation), then launch checklist in
 claude/promptular-progress.md in the Claude project.
 
 Git: dev = working branch, main = release. Same workflow as all repos.

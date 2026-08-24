@@ -9,7 +9,7 @@
 // purchase the caller reloads /api/account to show the new balance.
 
 import { Platform } from "react-native";
-import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import Purchases, { LOG_LEVEL, PRODUCT_CATEGORY } from "react-native-purchases";
 
 const IOS_API_KEY = "appl_HzxWGqMNgFLhCQhmtGUqbhWidwp";
 const ANDROID_API_KEY = "goog_rUiOvKWUpkUbvmzpdgJuoxorLjr";
@@ -70,7 +70,13 @@ export async function identifyPurchaser(userId: number): Promise<void> {
 
 export async function purchaseProduct(productId: string): Promise<void> {
   ensureConfigured();
-  const products = await Purchases.getProducts([productId]);
+  // PRODUCT_CATEGORY matters: on Android getProducts defaults to
+  // SUBSCRIPTION and returns nothing for one-time products (iOS ignores
+  // the parameter, which is why this only ever failed on Android).
+  const products = await Purchases.getProducts(
+    [productId],
+    PRODUCT_CATEGORY.NON_SUBSCRIPTION
+  );
   const product = products.find((p) => p.identifier === productId) || products[0];
   if (!product) {
     throw new Error("That product isn't available right now.");
