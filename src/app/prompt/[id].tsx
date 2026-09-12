@@ -19,7 +19,7 @@ import {
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api } from "@/lib/api";
 
 interface PromptData {
@@ -62,6 +62,7 @@ function extractVariables(text: string): string[] {
 }
 
 export default function PromptDetailScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [prompt, setPrompt] = useState<PromptData | null>(null);
@@ -520,9 +521,9 @@ export default function PromptDetailScreen() {
             <Pressable
               onPress={saveEdit}
               disabled={busy}
-              style={{ flex: 1, borderRadius: radius.button, backgroundColor: colors.violet, paddingVertical: 13, alignItems: "center", opacity: busy ? 0.6 : 1, minHeight: 44 }}
+              style={{ flex: 1, borderRadius: radius.button, backgroundColor: colors.spark, paddingVertical: 13, alignItems: "center", opacity: busy ? 0.6 : 1, minHeight: 44 }}
             >
-              <Text style={{ color: colors.lumen, fontWeight: "700" }}>
+              <Text style={{ color: colors.onSpark, fontWeight: "700" }}>
                 {busy ? "Saving..." : "Save changes"}
               </Text>
             </Pressable>
@@ -604,8 +605,8 @@ export default function PromptDetailScreen() {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="rocket" size={18} color={colors.violetDeep} />
-              <Text style={{ color: colors.ink, fontWeight: "900", fontSize: 16 }}>
+              <Ionicons name="rocket" size={18} color={colors.onSpark} />
+              <Text style={{ color: colors.onSpark, fontWeight: "900", fontSize: 16 }}>
                 Launch
               </Text>
             </View>
@@ -620,15 +621,15 @@ export default function PromptDetailScreen() {
             style={{
               marginTop: spacing(3),
               borderRadius: radius.button,
-              backgroundColor: colors.violet,
+              backgroundColor: colors.spark,
               paddingVertical: 14,
               alignItems: "center",
               minHeight: 44,
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="flash-outline" size={16} color={colors.lumen} />
-              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 14 }}>
+              <Ionicons name="sparkles-outline" size={16} color={colors.onSpark} />
+              <Text style={{ color: colors.onSpark, fontWeight: "700", fontSize: 14 }}>
                 Enhance this prompt
               </Text>
             </View>
@@ -785,7 +786,7 @@ export default function PromptDetailScreen() {
                     style={{
                       flex: 1,
                       borderRadius: radius.button,
-                      backgroundColor: colors.violet,
+                      backgroundColor: colors.spark,
                       paddingVertical: 13,
                       alignItems: "center",
                       opacity: replacing ? 0.6 : 1,
@@ -793,9 +794,9 @@ export default function PromptDetailScreen() {
                     }}
                   >
                     {replacing ? (
-                      <ActivityIndicator size="small" color={colors.lumen} />
+                      <ActivityIndicator size="small" color={colors.onSpark} />
                     ) : (
-                      <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                      <Text style={{ color: colors.onSpark, fontWeight: "700", fontSize: 13 }}>
                         Replace my prompt
                       </Text>
                     )}
@@ -1058,7 +1059,7 @@ export default function PromptDetailScreen() {
                 style={{
                   flex: 1,
                   borderRadius: radius.button,
-                  backgroundColor: colors.violet,
+                  backgroundColor: colors.spark,
                   paddingVertical: 13,
                   alignItems: "center",
                   opacity: platBusy || !platName.trim() || !platUrl.trim() ? 0.6 : 1,
@@ -1066,9 +1067,9 @@ export default function PromptDetailScreen() {
                 }}
               >
                 {platBusy ? (
-                  <ActivityIndicator size="small" color={colors.lumen} />
+                  <ActivityIndicator size="small" color={colors.onSpark} />
                 ) : (
-                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>
+                  <Text style={{ color: colors.onSpark, fontWeight: "700" }}>
                     {editPlatId !== null ? "Save" : "Add"}
                   </Text>
                 )}
@@ -1143,7 +1144,7 @@ export default function PromptDetailScreen() {
                 minHeight: 44,
               }}
             >
-              <Text style={{ color: colors.ink, fontWeight: "900", fontSize: 15 }}>
+              <Text style={{ color: colors.onSpark, fontWeight: "900", fontSize: 15 }}>
                 Copy and launch
               </Text>
             </Pressable>

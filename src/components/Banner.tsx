@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppState, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, spacing } from "@/lib/theme";
+import { spacing, useColors, type Colors } from "@/lib/theme";
 import { api } from "@/lib/api";
 
 interface BannerData {
@@ -15,13 +15,19 @@ interface BannerData {
   severity: string; // info | warning | critical
 }
 
-const STYLES: Record<string, { bg: string; fg: string; icon: string }> = {
-  info: { bg: colors.violet, fg: colors.lumen, icon: "information-circle" },
-  warning: { bg: colors.spark, fg: colors.ink, icon: "warning" },
-  critical: { bg: colors.danger, fg: colors.ink, icon: "alert-circle" },
-};
+function bannerStyles(
+  colors: Colors
+): Record<string, { bg: string; fg: string; icon: string }> {
+  return {
+    info: { bg: colors.spark, fg: colors.onSpark, icon: "information-circle" },
+    warning: { bg: colors.warn, fg: colors.onWarn, icon: "warning" },
+    critical: { bg: colors.danger, fg: "#FFFFFF", icon: "alert-circle" },
+  };
+}
 
 export default function Banner() {
+  const colors = useColors();
+  const STYLES = bannerStyles(colors);
   const insets = useSafeAreaInsets();
   const [banner, setBanner] = useState<BannerData | null>(null);
 

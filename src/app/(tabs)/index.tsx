@@ -16,7 +16,7 @@ import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 import { recordEnhanceAndMaybeAskReview } from "@/lib/reviewPrompt";
 import ErrorNotice, { friendlyError } from "@/components/ErrorNotice";
@@ -70,6 +70,7 @@ interface EnhanceResponse {
 }
 
 export default function EnhanceScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { shared } = useLocalSearchParams<{ shared?: string }>();
   const [prompt, setPrompt] = useState("");
@@ -220,7 +221,7 @@ export default function EnhanceScreen() {
         </Pressable>
       </View>
       <Text style={{ color: colors.lumenDim, marginTop: 4, fontSize: 15 }}>
-        Turn a lazy prompt into a great one.
+        Better prompts, every time.
       </Text>
 
       <View style={{ flexDirection: "row", gap: 8, marginTop: spacing(5), flexWrap: "wrap" }}>
@@ -241,14 +242,14 @@ export default function EnhanceScreen() {
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: radius.button,
-              backgroundColor: mode === m.id ? colors.violet : colors.panel,
+              backgroundColor: mode === m.id ? colors.spark : colors.panel,
               minHeight: 44,
               justifyContent: "center",
             }}
           >
             <Text
               style={{
-                color: mode === m.id ? colors.lumen : colors.lumenDim,
+                color: mode === m.id ? colors.onSpark : colors.lumenDim,
                 fontWeight: "700",
                 fontSize: 13,
               }}
@@ -329,11 +330,11 @@ export default function EnhanceScreen() {
         }}
       >
         {loading ? (
-          <ActivityIndicator color={colors.ink} />
+          <ActivityIndicator color={colors.onSpark} />
         ) : (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Ionicons name="flash" size={18} color={colors.violetDeep} />
-            <Text style={{ color: colors.ink, fontWeight: "900", fontSize: 16 }}>
+            <Ionicons name="sparkles" size={18} color={colors.onSpark} />
+            <Text style={{ color: colors.onSpark, fontWeight: "900", fontSize: 16 }}>
               Enhance
             </Text>
           </View>
@@ -364,8 +365,8 @@ export default function EnhanceScreen() {
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Ionicons name="bulb-outline" size={14} color={colors.spark} />
-            <Text style={{ color: colors.spark, fontWeight: "800", fontSize: 11, letterSpacing: 1 }}>
+            <Ionicons name="bulb-outline" size={14} color={colors.violet} />
+            <Text style={{ color: colors.violet, fontWeight: "800", fontSize: 11, letterSpacing: 1 }}>
               {MODES.find((m) => m.id === mode)?.label.toUpperCase()} MODE
             </Text>
           </View>
@@ -418,13 +419,13 @@ export default function EnhanceScreen() {
             marginTop: spacing(5),
             borderRadius: radius.card,
             borderWidth: 1,
-            borderColor: colors.violet + "66",
+            borderColor: colors.teal + "99",
             backgroundColor: colors.panel,
             padding: spacing(4),
           }}
         >
-          <Text style={{ color: colors.violet, fontWeight: "800", fontSize: 11, letterSpacing: 1 }}>
-            ENHANCED
+          <Text style={{ color: colors.good, fontWeight: "800", fontSize: 11, letterSpacing: 1 }}>
+            ✦ ENHANCED
           </Text>
           <Text style={{ color: colors.lumen, marginTop: 8, fontSize: 15, lineHeight: 22 }}>
             {result.enhanced}
@@ -441,7 +442,7 @@ export default function EnhanceScreen() {
                 onPress={handleSave}
                 disabled={saving || saved}
                 style={{
-                  backgroundColor: saved ? colors.ink : colors.violet,
+                  backgroundColor: saved ? colors.ink : colors.spark,
                   borderRadius: radius.button,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
@@ -450,7 +451,7 @@ export default function EnhanceScreen() {
                   opacity: saving ? 0.6 : 1,
                 }}
               >
-                <Text style={{ color: saved ? colors.good : colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                <Text style={{ color: saved ? colors.good : colors.onSpark, fontWeight: "700", fontSize: 13 }}>
                   {saved ? "✓ Saved" : saving ? "Saving..." : "Save"}
                 </Text>
               </Pressable>

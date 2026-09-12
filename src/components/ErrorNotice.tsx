@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api } from "@/lib/api";
 
 // Translate raw errors into plain language. Anything unrecognized gets a
@@ -58,6 +58,7 @@ export default function ErrorNotice({
   screen: string;
   onDismiss?: () => void;
 }) {
+  const colors = useColors();
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [formOpen, setFormOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -227,7 +228,7 @@ export default function ErrorNotice({
                   style={{
                     flex: 1,
                     borderRadius: radius.button,
-                    backgroundColor: colors.violet,
+                    backgroundColor: colors.spark,
                     paddingVertical: 13,
                     alignItems: "center",
                     opacity: formStatus === "sending" || !note.trim() ? 0.6 : 1,
@@ -235,9 +236,9 @@ export default function ErrorNotice({
                   }}
                 >
                   {formStatus === "sending" ? (
-                    <ActivityIndicator size="small" color={colors.lumen} />
+                    <ActivityIndicator size="small" color={colors.onSpark} />
                   ) : (
-                    <Text style={{ color: colors.lumen, fontWeight: "700" }}>Send</Text>
+                    <Text style={{ color: colors.onSpark, fontWeight: "700" }}>Send</Text>
                   )}
                 </Pressable>
               )}

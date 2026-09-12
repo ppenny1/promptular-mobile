@@ -31,7 +31,7 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Ionicons } from "@expo/vector-icons";
 import { ensureGoogleConfigured } from "@/lib/googleAuth";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors, useTheme, type ThemeMode } from "@/lib/theme";
 import { api, ApiError, setToken, clearToken, getToken, API_BASE } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import {
@@ -59,6 +59,8 @@ interface AccountUser {
 }
 
 export default function AccountScreen() {
+  const colors = useColors();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const router = useRouter();
   const [user, setUser] = useState<AccountUser | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "signedout">("loading");
@@ -193,6 +195,11 @@ export default function AccountScreen() {
         style: "destructive",
         onPress: async () => {
           await clearToken();
+          // Forget the Google session too, so the next Sign in with Google
+          // shows the account chooser instead of silently reusing the last one.
+          try {
+            await GoogleSignin.signOut();
+          } catch {}
           setUser(null);
           setState("signedout");
         },
@@ -560,7 +567,7 @@ export default function AccountScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: colors.spark, fontSize: 24, fontWeight: "800" }}>
+              <Text style={{ color: colors.violet, fontSize: 24, fontWeight: "800" }}>
                 {user.creditBalance}
               </Text>
               <Text style={{ color: colors.lumenDim, fontSize: 12, marginTop: 2 }}>
@@ -617,7 +624,7 @@ export default function AccountScreen() {
                   {pack.credits}
                 </Text>
                 <Text style={{ color: colors.lumenDim, fontSize: 11 }}>credits</Text>
-                <Text style={{ color: colors.spark, fontWeight: "800", fontSize: 14, marginTop: 6 }}>
+                <Text style={{ color: colors.violet, fontWeight: "800", fontSize: 14, marginTop: 6 }}>
                   {pack.price}
                 </Text>
               </Pressable>
@@ -641,7 +648,7 @@ export default function AccountScreen() {
                 <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 17 }}>
                   Promptular Pro
                 </Text>
-                <Text style={{ color: colors.spark, fontWeight: "800", fontSize: 17 }}>
+                <Text style={{ color: colors.violet, fontWeight: "800", fontSize: 17 }}>
                   {PRO_PRODUCT.price}
                 </Text>
               </View>
@@ -707,6 +714,49 @@ export default function AccountScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={16} color={colors.lumenDim} />
             </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
+            <View style={{ ...row, justifyContent: "space-between" }}>
+              <Ionicons name="contrast-outline" size={18} color={colors.lumenDim} />
+              <Text style={{ color: colors.lumen, fontSize: 15, fontWeight: "600", flex: 1 }}>
+                Appearance
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  borderRadius: radius.button,
+                  borderWidth: 1,
+                  borderColor: colors.panelEdge,
+                  padding: 2,
+                }}
+              >
+                {(["system", "light", "dark"] as ThemeMode[]).map((m) => (
+                  <Pressable
+                    key={m}
+                    onPress={() => setThemeMode(m)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: themeMode === m }}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: radius.button,
+                      backgroundColor: themeMode === m ? colors.spark : "transparent",
+                      minHeight: 32,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: themeMode === m ? colors.onSpark : colors.lumenDim,
+                        fontSize: 12,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {m === "system" ? "Auto" : m === "light" ? "Light" : "Dark"}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             <View style={{ height: 1, backgroundColor: colors.panelEdge }} />
             <Pressable onPress={() => router.push("/help")} style={row}>
               <Ionicons name="help-circle-outline" size={18} color={colors.lumenDim} />
@@ -868,7 +918,7 @@ export default function AccountScreen() {
                 style={{
                   flex: 1,
                   borderRadius: radius.button,
-                  backgroundColor: colors.violet,
+                  backgroundColor: colors.spark,
                   paddingVertical: 13,
                   alignItems: "center",
                   opacity: importBusy || !importText.trim() ? 0.6 : 1,
@@ -876,9 +926,9 @@ export default function AccountScreen() {
                 }}
               >
                 {importBusy ? (
-                  <ActivityIndicator size="small" color={colors.lumen} />
+                  <ActivityIndicator size="small" color={colors.onSpark} />
                 ) : (
-                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>Import</Text>
+                  <Text style={{ color: colors.onSpark, fontWeight: "700" }}>Import</Text>
                 )}
               </Pressable>
             </View>
@@ -966,7 +1016,7 @@ export default function AccountScreen() {
                 style={{
                   flex: 1,
                   borderRadius: radius.button,
-                  backgroundColor: colors.violet,
+                  backgroundColor: colors.spark,
                   paddingVertical: 13,
                   alignItems: "center",
                   opacity: promoBusy || !promoCode.trim() ? 0.6 : 1,
@@ -974,9 +1024,9 @@ export default function AccountScreen() {
                 }}
               >
                 {promoBusy ? (
-                  <ActivityIndicator size="small" color={colors.lumen} />
+                  <ActivityIndicator size="small" color={colors.onSpark} />
                 ) : (
-                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>Redeem</Text>
+                  <Text style={{ color: colors.onSpark, fontWeight: "700" }}>Redeem</Text>
                 )}
               </Pressable>
             </View>

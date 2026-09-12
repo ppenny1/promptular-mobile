@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api } from "@/lib/api";
 
 interface PromptRow {
@@ -24,6 +24,7 @@ interface PromptRow {
 }
 
 export default function CollectionScreen() {
+  const colors = useColors();
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const router = useRouter();
   const [prompts, setPrompts] = useState<PromptRow[]>([]);

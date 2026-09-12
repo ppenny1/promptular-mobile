@@ -14,7 +14,7 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 
 interface HistoryRow {
@@ -51,6 +51,7 @@ function timeAgo(iso: string) {
 }
 
 export default function HistoryScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "signedout" | "error">("loading");
@@ -199,7 +200,7 @@ export default function HistoryScreen() {
                   {(MODE_LABELS[item.mode] || item.mode).toUpperCase()}
                 </Text>
                 {item.strength === "full" && (
-                  <Text style={{ color: colors.spark, fontWeight: "700", fontSize: 11 }}>
+                  <Text style={{ color: colors.violet, fontWeight: "700", fontSize: 11 }}>
                     FULL REWORK
                   </Text>
                 )}
@@ -282,7 +283,7 @@ export default function HistoryScreen() {
                         alignItems: "center",
                         gap: 6,
                         borderRadius: radius.button,
-                        backgroundColor: colors.violet,
+                        backgroundColor: colors.spark,
                         paddingHorizontal: 14,
                         minHeight: 44,
                         justifyContent: "center",
@@ -290,11 +291,11 @@ export default function HistoryScreen() {
                       }}
                     >
                       {savingId === item.id ? (
-                        <ActivityIndicator size="small" color={colors.lumen} />
+                        <ActivityIndicator size="small" color={colors.onSpark} />
                       ) : (
-                        <Ionicons name="bookmark-outline" size={16} color={colors.lumen} />
+                        <Ionicons name="bookmark-outline" size={16} color={colors.onSpark} />
                       )}
-                      <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                      <Text style={{ color: colors.onSpark, fontWeight: "700", fontSize: 13 }}>
                         Save to Library
                       </Text>
                     </Pressable>

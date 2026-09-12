@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 
 interface PromptRow {
@@ -33,6 +33,7 @@ interface PromptRow {
 type Filter = { type: "all" } | { type: "fav" };
 
 export default function LibraryScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [prompts, setPrompts] = useState<PromptRow[]>([]);
   const [q, setQ] = useState("");
@@ -121,12 +122,12 @@ export default function LibraryScreen() {
     gap: 5,
     paddingHorizontal: 14,
     borderRadius: radius.button,
-    backgroundColor: active ? colors.violet : colors.panel,
+    backgroundColor: active ? colors.spark : colors.panel,
     minHeight: 38,
     justifyContent: "center" as const,
   });
   const chipText = (active: boolean) => ({
-    color: active ? colors.lumen : colors.lumenDim,
+    color: active ? colors.onSpark : colors.lumenDim,
     fontWeight: "700" as const,
     fontSize: 13,
   });
@@ -162,7 +163,7 @@ export default function LibraryScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="sparkles-outline" size={14} color={colors.spark} />
+                <Ionicons name="sparkles-outline" size={14} color={colors.violet} />
                 <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
                   Templates
                 </Text>
@@ -177,15 +178,15 @@ export default function LibraryScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 4,
-                  backgroundColor: colors.violet,
+                  backgroundColor: colors.spark,
                   borderRadius: radius.button,
                   paddingHorizontal: 14,
                   minHeight: 38,
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="add" size={16} color={colors.lumen} />
-                <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>
+                <Ionicons name="add" size={16} color={colors.onSpark} />
+                <Text style={{ color: colors.onSpark, fontWeight: "700", fontSize: 13 }}>
                   New
                 </Text>
               </Pressable>
@@ -266,15 +267,15 @@ export default function LibraryScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 6,
-                backgroundColor: colors.violet,
+                backgroundColor: colors.spark,
                 borderRadius: radius.button,
                 paddingHorizontal: 16,
                 minHeight: 44,
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="sparkles-outline" size={15} color={colors.lumen} />
-              <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 14 }}>
+              <Ionicons name="sparkles-outline" size={15} color={colors.onSpark} />
+              <Text style={{ color: colors.onSpark, fontWeight: "700", fontSize: 14 }}>
                 Browse templates
               </Text>
             </Pressable>
@@ -440,7 +441,7 @@ export default function LibraryScreen() {
                 style={{
                   flex: 1,
                   borderRadius: radius.button,
-                  backgroundColor: colors.violet,
+                  backgroundColor: colors.spark,
                   paddingVertical: 13,
                   alignItems: "center",
                   opacity: newBusy || !newTitle.trim() || !newText.trim() ? 0.6 : 1,
@@ -448,9 +449,9 @@ export default function LibraryScreen() {
                 }}
               >
                 {newBusy ? (
-                  <ActivityIndicator size="small" color={colors.lumen} />
+                  <ActivityIndicator size="small" color={colors.onSpark} />
                 ) : (
-                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>Save</Text>
+                  <Text style={{ color: colors.onSpark, fontWeight: "700" }}>Save</Text>
                 )}
               </Pressable>
             </View>

@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 
 interface CollectionRow {
@@ -28,6 +28,7 @@ interface CollectionRow {
 }
 
 export default function CollectionsScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [collections, setCollections] = useState<CollectionRow[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "signedout" | "error">("loading");
@@ -143,15 +144,15 @@ export default function CollectionsScreen() {
             flexDirection: "row",
             alignItems: "center",
             gap: 4,
-            backgroundColor: colors.violet,
+            backgroundColor: colors.spark,
             borderRadius: radius.button,
             paddingHorizontal: 14,
             minHeight: 38,
             justifyContent: "center",
           }}
         >
-          <Ionicons name="add" size={16} color={colors.lumen} />
-          <Text style={{ color: colors.lumen, fontWeight: "700", fontSize: 13 }}>New</Text>
+          <Ionicons name="add" size={16} color={colors.onSpark} />
+          <Text style={{ color: colors.onSpark, fontWeight: "700", fontSize: 13 }}>New</Text>
         </Pressable>
       </View>
 
@@ -309,7 +310,7 @@ export default function CollectionsScreen() {
                 style={{
                   flex: 1,
                   borderRadius: radius.button,
-                  backgroundColor: colors.violet,
+                  backgroundColor: colors.spark,
                   paddingVertical: 13,
                   alignItems: "center",
                   opacity: busy || !name.trim() ? 0.6 : 1,
@@ -317,9 +318,9 @@ export default function CollectionsScreen() {
                 }}
               >
                 {busy ? (
-                  <ActivityIndicator size="small" color={colors.lumen} />
+                  <ActivityIndicator size="small" color={colors.onSpark} />
                 ) : (
-                  <Text style={{ color: colors.lumen, fontWeight: "700" }}>
+                  <Text style={{ color: colors.onSpark, fontWeight: "700" }}>
                     {editing ? "Save" : "Create"}
                   </Text>
                 )}

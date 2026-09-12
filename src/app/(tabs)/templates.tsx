@@ -12,10 +12,10 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
 
 interface Template {
@@ -31,7 +31,7 @@ interface TemplateGroup {
 }
 
 export default function TemplatesScreen() {
-  const router = useRouter();
+  const colors = useColors();
   const [groups, setGroups] = useState<TemplateGroup[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -109,17 +109,15 @@ export default function TemplatesScreen() {
         >
           {selected ? selected.title : "Templates"}
         </Text>
-        <Pressable
-          onPress={() => (selected ? setSelected(null) : router.back())}
-          hitSlop={10}
-          style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
-        >
-          <Ionicons
-            name={selected ? "arrow-back" : "close"}
-            size={26}
-            color={colors.lumenDim}
-          />
-        </Pressable>
+        {selected ? (
+          <Pressable
+            onPress={() => setSelected(null)}
+            hitSlop={10}
+            style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons name="arrow-back" size={26} color={colors.lumenDim} />
+          </Pressable>
+        ) : null}
       </View>
 
       {state === "loading" && (
@@ -163,14 +161,14 @@ export default function TemplatesScreen() {
                   style={{
                     paddingHorizontal: 14,
                     borderRadius: radius.button,
-                    backgroundColor: active ? colors.violet : colors.panel,
+                    backgroundColor: active ? colors.spark : colors.panel,
                     minHeight: 38,
                     justifyContent: "center",
                   }}
                 >
                   <Text
                     style={{
-                      color: active ? colors.lumen : colors.lumenDim,
+                      color: active ? colors.onSpark : colors.lumenDim,
                       fontWeight: "700",
                       fontSize: 13,
                     }}
@@ -301,7 +299,7 @@ export default function TemplatesScreen() {
               style={{
                 flex: 1,
                 borderRadius: radius.button,
-                backgroundColor: savedSlugs.has(selected.slug) ? colors.ink : colors.violet,
+                backgroundColor: savedSlugs.has(selected.slug) ? colors.ink : colors.spark,
                 borderWidth: savedSlugs.has(selected.slug) ? 1 : 0,
                 borderColor: colors.good + "88",
                 paddingVertical: 14,
@@ -311,11 +309,11 @@ export default function TemplatesScreen() {
               }}
             >
               {saving ? (
-                <ActivityIndicator size="small" color={colors.lumen} />
+                <ActivityIndicator size="small" color={colors.onSpark} />
               ) : (
                 <Text
                   style={{
-                    color: savedSlugs.has(selected.slug) ? colors.good : colors.lumen,
+                    color: savedSlugs.has(selected.slug) ? colors.good : colors.onSpark,
                     fontWeight: "700",
                     fontSize: 14,
                   }}

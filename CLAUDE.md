@@ -10,10 +10,17 @@ break POST bodies) and localhost:3000 / 10.0.2.2:3000 in dev.
 
 - App: Promptular. Bundle/package: com.decalvenue.promptular. Expo owner:
   decal-venue-inc. Scheme: promptular. iPhone-only (supportsTablet false).
-- Dark-only UI. Tokens in src/lib/theme.ts (ink bg, panel cards, violet
-  primary, spark = the Enhance action, lumen text). Brand locked Aug 21,
-  2026; icon/splash/adaptive-icon are real assets in assets/images (never
-  Expo defaults; Android adaptive icon is its own asset, already set).
+- Light by default with a dark option (Account > Appearance: Auto/Light/Dark,
+  saved in AsyncStorage "promptular.theme"). Tokens in src/lib/theme.tsx,
+  read through useColors() in every screen (never import a static colors
+  object). Original brand restored Sept 12, 2026: purple #8c52ff, teal
+  #48c9b0, the P-with-sparkle mark. Tagline "Better prompts, every time."
+  NEVER use "Turn lazy prompts into great ones" (Prompt Cowboy's headline).
+  The Aug 21 bolt/indigo/yellow look is retired. icon/splash/adaptive-icon
+  are real assets in assets/images (never Expo defaults; Android adaptive
+  icon is its own asset, lilac #E3D8FC background).
+- Tabs: Enhance | Library | Templates | Collections | Account. Templates is
+  a tab (src/app/(tabs)/templates.tsx), no longer a modal.
 
 ## Pricing (locked; no subscriptions anywhere)
 

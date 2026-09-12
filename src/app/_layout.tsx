@@ -4,10 +4,20 @@ import { StatusBar } from "expo-status-bar";
 import { Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useShareIntent } from "expo-share-intent";
-import { colors } from "@/lib/theme";
+import { ThemeProvider, useColors, useTheme } from "@/lib/theme";
 import Banner from "@/components/Banner";
 
 export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootNavigator />
+    </ThemeProvider>
+  );
+}
+
+function RootNavigator() {
+  const colors = useColors();
+  const { resolved } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // iOS modals present as sheets below the status bar; Android modals are
@@ -33,7 +43,7 @@ export default function RootLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.ink }}>
-      <StatusBar style="light" />
+      <StatusBar style={resolved === "dark" ? "light" : "dark"} />
       <Banner />
       <Stack
         screenOptions={{
@@ -56,10 +66,6 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="help"
-          options={{ presentation: "modal", contentStyle: modalStyle }}
-        />
-        <Stack.Screen
-          name="templates"
           options={{ presentation: "modal", contentStyle: modalStyle }}
         />
       </Stack>

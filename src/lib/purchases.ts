@@ -20,7 +20,7 @@ export const PURCHASES_AVAILABLE = API_KEY.length > 0;
 
 // Display ladder (locked Aug 21, 2026). Store prices are the source of
 // truth at purchase time; these labels are marketing copy.
-export const CREDIT_PACKS = [
+export const CREDIT_PACKS: readonly { id: string; credits: number; price: string; tag?: string }[] = [
   { id: "com.decalvenue.promptular.credits.50", credits: 50, price: "$4.99" },
   { id: "com.decalvenue.promptular.credits.100", credits: 100, price: "$8.99", tag: "Popular" },
   { id: "com.decalvenue.promptular.credits.500", credits: 500, price: "$19.99", tag: "Best value" },

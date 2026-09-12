@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@/lib/theme";
+import { radius, spacing, useColors } from "@/lib/theme";
 import { api } from "@/lib/api";
 
 interface HelpSection {
@@ -33,6 +33,7 @@ const DEFAULT_FOOTER: HelpFooter = {
 };
 
 export default function HelpScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [sections, setSections] = useState<HelpSection[]>([]);
   const [footer, setFooter] = useState<HelpFooter>(DEFAULT_FOOTER);
