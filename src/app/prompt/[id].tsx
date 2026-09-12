@@ -893,7 +893,7 @@ export default function PromptDetailScreen() {
             <Text style={{ color: colors.lumenDim, fontSize: 12, marginTop: 2 }}>
               Your prompt is copied automatically. Paste when you arrive.
             </Text>
-            <ScrollView style={{ marginTop: spacing(3), maxHeight: 380 }}>
+            <ScrollView style={{ marginTop: spacing(3), maxHeight: 560 }}>
               {platforms.map((p, i) => (
                 <Pressable
                   key={`${p.isCustom ? "c" : "d"}-${p.id ?? i}`}
@@ -914,7 +914,7 @@ export default function PromptDetailScreen() {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 12,
-                    paddingVertical: 13,
+                    paddingVertical: 8,
                     minHeight: 44,
                   }}
                 >
@@ -1102,10 +1102,30 @@ export default function PromptDetailScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1, backgroundColor: "#00000099", justifyContent: "flex-end" }}
         >
+          <Pressable
+            style={{ flex: 1 }}
+            onPress={() => {
+              setVarsOpen(false);
+              setPendingPlatform(null);
+            }}
+          />
           <View style={{ backgroundColor: colors.panel, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing(5), paddingBottom: spacing(10) }}>
-            <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
-              Fill in the blanks
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: colors.lumen, fontWeight: "800", fontSize: 18 }}>
+                Fill in the blanks
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setVarsOpen(false);
+                  setPendingPlatform(null);
+                }}
+                hitSlop={10}
+                accessibilityLabel="Close"
+                style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -12 }}
+              >
+                <Ionicons name="close" size={24} color={colors.lumenDim} />
+              </Pressable>
+            </View>
             {variables.map((v) => (
               <View key={v} style={{ marginTop: spacing(3) }}>
                 <Text style={{ color: colors.lumenDim, fontSize: 13, marginBottom: 6 }}>

@@ -93,7 +93,8 @@ export default function TemplatesScreen() {
           alignItems: "center",
           justifyContent: "space-between",
           paddingHorizontal: spacing(5),
-          paddingTop: spacing(5),
+          // A tab now, not a modal sheet: clear the status bar like the other tabs.
+          paddingTop: spacing(16),
           paddingBottom: spacing(2),
         }}
       >
@@ -145,7 +146,7 @@ export default function TemplatesScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={{ marginTop: spacing(3), flexGrow: 0, height: 46 }}
+            style={{ marginTop: spacing(3), marginBottom: spacing(3), flexGrow: 0, height: 46 }}
             contentContainerStyle={{
               paddingHorizontal: spacing(5),
               gap: 8,
